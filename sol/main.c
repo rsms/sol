@@ -1,7 +1,28 @@
 #include <sol/common.h>
 #include <sol/sched.h>
+#include <sol/debug.h>
 
 int main(int argc, const char** argv) {
+  SInstr ins;
+
+  ins = S_INSTR_ABC(S_INSTR_OP_MAX, S_INSTR_A_MAX, S_INSTR_B_MAX, S_INSTR_C_MAX);
+  printf("instr: %s\n", SDFormatBin(ins, 32));
+  printf("   OP: %u, A: %u, B: %u, C: %u\n",
+    SInstrGetOP(ins),
+    SInstrGetA(ins),
+    SInstrGetB(ins),
+    SInstrGetC(ins));
+
+  return 0;
+
+  // printf("4:     %s\n", SDFormatBin(4, 32));
+  // printf("-4:    %s\n", SDFormatBin((uint32_t)-4, 32));
+  // SInstr jump = SInstr_JUMP((uint32_t)-4);
+  // SInstr loadk = SInstr_LOADK(1, 2);
+  // printf("jump:  %s\n", SDFormatBin(jump, 32));
+  // printf("loadk: %s\n", SDFormatBin(loadk, 32));
+
+  return 0;
 
   int i = 0;
   SInstr opcodes[128] = { 0, };

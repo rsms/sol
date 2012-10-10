@@ -42,57 +42,57 @@ STaskStatus SVMExec(STask *task) {
 
   while (1) {
     switch (SInstrGetOP(pc[0])) {
-    case SInstrOP_RETURN: {
+    case S_OP_RETURN: {
       SDLogOpAB;
       ++pc;
       task->pc = (pc == task->end) ? task->start : pc;
       return STaskStatusEnd;
     }
-    case SInstrOP_MOVE: {
+    case S_OP_MOVE: {
       SDLogOpAB;
       ++pc; break;
     }
-    case SInstrOP_LOADK: {
+    case S_OP_LOADK: {
       SDLogOpABu;
       ++pc; break;
     }
-    case SInstrOP_ADDI: {
+    case S_OP_ADDI: {
       SDLogOpABC;
       ++pc; break;
     }
-    case SInstrOP_SUBI: {
+    case S_OP_SUBI: {
       SDLogOpABC;
       ++pc; break;
     }
-    case SInstrOP_MULI: {
+    case S_OP_MULI: {
       SDLogOpABC;
       ++pc; break;
     }
-    case SInstrOP_DIVI: {
+    case S_OP_DIVI: {
       SDLogOpABC;
       ++pc; break;
     }
-    case SInstrOP_NOT: {
+    case S_OP_NOT: {
       SDLogOpAB;
       ++pc; break;
     }
-    case SInstrOP_EQ: {
+    case S_OP_EQ: {
       SDLogOpABC;
       ++pc; break;
     }
-    case SInstrOP_LT: {
+    case S_OP_LT: {
       SDLogOpABC;
       ++pc; break;
     }
-    case SInstrOP_LE: {
+    case S_OP_LE: {
       SDLogOpABC;
       ++pc; break;
     }
-    case SInstrOP_JUMP: {
+    case S_OP_JUMP: {
       SDLogOpBss;
       ++pc; break;
     }
-    case SInstrOP_YIELD: {
+    case S_OP_YIELD: {
       SDLogOpAB;
       task->pc = ++pc;
       return STaskStatusYield;

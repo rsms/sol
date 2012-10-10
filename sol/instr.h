@@ -3,47 +3,48 @@
 #include <sol/common.h>
 
 //
-// One instruction is 32 bits and are encoded in one of three ways:
+// One instruction is 32 bits:
+typedef uint32_t SInstr;
+//
+// Each instruction is encoded in one of three ways:
 //
 //                              OP A B C
-//             Operation OP with operands A, B and C
+//              Operation OP with operands A, B and C
 //
 // | 0        5 | 6          13 | 14           22 | 23           31 |
 // |------------|---------------|-----------------|-----------------|
 // |     OP     |       A       |        B        |        C        |
 // |------------|---------------|-----------------------------------|
 //       6              8                9                 9
+//    [0..63]        [0..255]         [0..511]          [0..511]
 //
-//
-//                             OP A Bs/Bu
-//   Operation OP with operand A with signed/unsigned integer Bs/Bu
+//                              OP A Bx
+//              Operation OP with operands A and Bs|Bu
 //
 // | 0        5 | 6          13 | 14                             31 |
 // |------------|---------------|-----------------------------------|
 // |     OP     |       A       |              Bs/Bu                |
 // |------------|---------------|-----------------------------------|
 //       6              8                        18
+//    [0..63]        [0..255]             Bu: [0..262143]
+//                                        Bu: [-131071..131072]
 //
-//
-//                             OP Bss/Buu
-//          Operation OP with signed/unsigned integer Bss/Buu
+//                               OP Bxx
+//                 Operation OP with operand Bss|Buu
 //
 // | 0        5 | 6                                              31 |
 // |------------|---------------------------------------------------|
 // |     OP     |                     Bss/Buu                       |
 // |------------|---------------------------------------------------|
 //       6                               26
+//    [0..63]                   Buu: [0..67108863]
+//                              Bss: [-33554431..33554432]
 //
 // There is room for 64 operations and 256 registers (OP=6 bits, A=8 bits)
 //
-
-// An instruction
-typedef uint32_t SInstr;
-
-// Instruction definitions
 #define S_INSTR_DEFINE(_) \
   _(RETURN,     AB_) /* return R(A), ... ,R(A+B-2) */\
-  _(YIELD,      AB_) /* results R(A), ... ,R(B) */\
+  _(YIELD,      AB_) /* suspend and reschedule */\
   _(MOVE,       AB_) /* R(A) = R(B) */\
   _(LOADK,      ABu) /* R(A) = K(Bu) */\
   _(ADDI,       ABC) /* R(A) = RK(B) + RK(C) */\
@@ -56,166 +57,121 @@ typedef uint32_t SInstr;
   _(LE,         ABC) /* if ((RK(B) <= RK(C)) ~= A) then PC++ */\
   _(JUMP,       Bss) /* PC += Bss */
 
-// Each instruction will cause the following to be defined:
-//
-// - A unique operation code [0-63] under the name SInstrOP_<name>
-//
-// - A function "SInstr SInstr_<name>(...)" The arguments the function accepts
-//   will match the OP's arguments. For instance, an OP defined with arguments
-//   "AB_" will have a "SInstr SInstr_<name>(uint8_t A, uint16_t B)" function.
-//
-
-// The following macro functions are available for reading individual values
-// of instructions:
-//
-//   uint8_t   SInstrGetOP  (SInstr i)
-//   uint8_t   SInstrGetA   (SInstr i)
-//   uint16_t  SInstrGetB   (SInstr i)
-//   uint16_t  SInstrGetC   (SInstr i)
-//   int32_t   SInstrGetBs  (SInstr i)
-//   uint32_t  SInstrGetBu  (SInstr i)
-//   int32_t   SInstrGetBss (SInstr i)
-//   uint32_t  SInstrGetBuu (SInstr i)
-//
-
-// Operation values
+// Each instruction will have a corresponding operation code identified by an
+// enum value "S_OP_<name>"
 typedef enum {
-  #define I_ENUM(name, args) SInstrOP_##name,
+  #define I_ENUM(name, args) S_OP_##name,
   S_INSTR_DEFINE(I_ENUM)
   #undef I_ENUM
 } S_OP_V_;
 
-//
-//  31     23 22     14 13     6 5    0
-//  000000000 000000000 00000000 000000   C=0, B=0, A=0, OP=0
-//  000000000 000000000 00000000 000011   C=0, B=0, A=0, OP=3
-//  000000000 000000000 00000010 000011   C=0, B=0, A=2, OP=3
-//
+// Macros to compose instructions
+#define S_INSTR_A(OP, A) \
+  (((SInstr)(OP)) | \
+   (((SInstr)(A) << S_INSTR_OP_SIZE) & S_INSTR_A_MASK) \
+  )
+
+#define S_INSTR_AB(OP, A, B) \
+  (((SInstr)(OP)) | \
+   (((SInstr)(A) << S_INSTR_OP_SIZE) & S_INSTR_A_MASK) | \
+   (((SInstr)(B) << (S_INSTR_OP_SIZE + S_INSTR_A_SIZE)) & S_INSTR_B_MASK) \
+  )
+
+#define S_INSTR_ABC(OP, A, B, C) \
+  (((SInstr)(OP)) | \
+   (((SInstr)(A) << S_INSTR_OP_SIZE) & S_INSTR_A_MASK) | \
+   (((SInstr)(B) << (S_INSTR_OP_SIZE + S_INSTR_A_SIZE)) & S_INSTR_B_MASK) | \
+   ((SInstr)(C) << (S_INSTR_OP_SIZE + S_INSTR_A_SIZE + S_INSTR_B_SIZE)) \
+  )
+
+#define S_INSTR_ABu(OP, A, Bu) \
+  (((SInstr)(OP)) | \
+   (((SInstr)(A) << S_INSTR_OP_SIZE) & S_INSTR_A_MASK) | \
+   ((SInstr)(Bu) << (S_INSTR_OP_SIZE + S_INSTR_A_SIZE)) \
+  )
+
+#define S_INSTR_ABs(OP, A, Bs) \
+  S_INSTR_ABu((OP), (A), ((uint32_t)(Bs) + (S_INSTR_Bu_MAX / 2)) )
+
+#define S_INSTR_Buu(OP, Buu) \
+  (((SInstr)(OP)) | \
+   ((SInstr)(Buu) << S_INSTR_OP_SIZE) \
+  )
+
+#define S_INSTR_Bss(OP, Bss) \
+  S_INSTR_Buu((OP), ((uint32_t)(Bss) + (S_INSTR_Buu_MAX / 2)) )
+
+// Macros for accessing instruction field values
+#define SInstrGetOP(i)  ((uint8_t)((i) & S_INSTR_OP_MASK))
+#define SInstrGetA(i)   ((uint8_t)(((i) & S_INSTR_A_MASK)  >> S_INSTR_A_OFFS))
+#define SInstrGetB(i)   ((uint16_t)(((i) & S_INSTR_B_MASK)  >> S_INSTR_B_OFFS))
+#define SInstrGetC(i)   ((uint16_t)(((i) & S_INSTR_C_MASK)  >> S_INSTR_C_OFFS))
+#define SInstrGetBu(i)  ((uint32_t)(((i) & S_INSTR_Bu_MASK) >> S_INSTR_Bu_OFFS))
+#define SInstrGetBuu(i) ((uint32_t)((i) >> S_INSTR_OP_SIZE))
+#define SInstrGetBs(i)  ((int32_t)(SInstrGetBu(i) - (S_INSTR_Bu_MAX/2)))
+#define SInstrGetBss(i) ((int32_t)(SInstrGetBuu(i) - (S_INSTR_Buu_MAX/2)))
+
+// Instruction component constants
+// Operation code
 #define S_INSTR_OP_SIZE 6
 #define S_INSTR_OP_MASK 0x3f       // 000000000 000000000 00000000 111111
 #define S_INSTR_OP_MAX  0x3f
-
+// Field A
 #define S_INSTR_A_SIZE  8
 #define S_INSTR_A_OFFS  6
 #define S_INSTR_A_MASK  0x3fc0     // 000000000 000000000 11111111 000000
 #define S_INSTR_A_MAX   0xff
-
+// Field B
 #define S_INSTR_B_SIZE  9
 #define S_INSTR_B_OFFS  14
 #define S_INSTR_B_MASK  0x7fc000   // 000000000 111111111 00000000 000000
 #define S_INSTR_B_MAX   0x1ff
-
+// Field C
 #define S_INSTR_C_SIZE  9
 #define S_INSTR_C_OFFS  23
 #define S_INSTR_C_MASK  0xff800000 // 111111111 000000000 00000000 000000
 #define S_INSTR_C_MAX   0x1ff
+// Field Bu
+#define S_INSTR_Bu_SIZE 18
+#define S_INSTR_Bu_MASK 0xffffc000 // 111111111111111111 00000000 000000
+#define S_INSTR_Bu_OFFS 14
+#define S_INSTR_Bu_MAX  0x3ffff
+// Field Bs
+#define S_INSTR_Bs_SIZE S_INSTR_Bu_SIZE
+#define S_INSTR_Bs_MASK S_INSTR_Bu_MASK
+#define S_INSTR_Bs_OFFS S_INSTR_Bu_OFFS
+#define S_INSTR_Bs_MIN  (-(S_INSTR_Bu_MAX/2))
+#define S_INSTR_Bs_MAX  ((-S_INSTR_Bs_MIN)+1)
+// Field Buu
+#define S_INSTR_Buu_SIZE 26
+#define S_INSTR_Buu_MASK 0xffffffc0 // 11111111111111111111111111 000000
+#define S_INSTR_Buu_OFFS 6
+#define S_INSTR_Buu_MAX  0x3ffffff
+// Field Bss
+#define S_INSTR_Bss_SIZE S_INSTR_Buu_SIZE
+#define S_INSTR_Bss_MASK S_INSTR_Buu_MASK
+#define S_INSTR_Bss_OFFS S_INSTR_Buu_OFFS
+#define S_INSTR_Bss_MIN  (-(S_INSTR_Buu_MAX/2))
+#define S_INSTR_Bss_MAX  ((-S_INSTR_Bss_MIN)+1)
+
+// Memory layout
+// ABC:
 //
-//  31              14 13     6 5    0
-//  000000000000000000 00000000 000000   Bx=0, A=0, OP=0
+//  31     23 22     14 13     6 5    0
+//  000000000 000000000 00000000 000000   C=0, B=0, A=0, OP=0
+//  MSB                             LSB
 //
-#define S_INSTR_Bx_SIZE 18
-#define S_INSTR_Bx_MASK 0xffffc000 // 111111111111111111 00000000 000000
-#define S_INSTR_Bx_OFFS 14
-#define S_INSTR_Bx_MAX  0x3ffff
+// ABu:
 //
-//  31                       6 5    0
-//  00000000000000000000000000 000000   Bxx=0, OP=0
+//   31              14 13     6 5    0
+//   000000000000000000 00000000 000000   Bu=0, A=0, OP=0
+//   MSB                            LSB
 //
-#define S_INSTR_Bxx_SIZE 26
-#define S_INSTR_Bxx_MASK 0xffffffc0 // 11111111111111111111111111 000000
-#define S_INSTR_Bxx_OFFS 6
-#define S_INSTR_Bxx_MAX  0x3ffffff
-
-// Functions for encoding values
-#define A__(name)\
-  static inline SInstr SInstr_##name(uint8_t A) { \
-    SInstr oc = 0; \
-    oc |= A; oc <<= S_INSTR_OP_SIZE; \
-    oc |= SInstrOP_##name; \
-    return oc; \
-  }
-
-#define AB_(name) \
-  static inline SInstr SInstr_##name(uint8_t A, uint16_t B) { \
-    SInstr oc = 0; \
-    oc |= B; oc <<= S_INSTR_A_SIZE; \
-    oc |= A; oc <<= S_INSTR_OP_SIZE; \
-    oc |= SInstrOP_##name; \
-    return oc; \
-  }
-
-#define ABC(name) \
-  static inline SInstr SInstr_##name(uint8_t A, uint16_t B, uint16_t C) { \
-    SInstr oc = 0; \
-    oc |= C; oc <<= S_INSTR_B_SIZE; \
-    oc |= B; oc <<= S_INSTR_A_SIZE; \
-    oc |= A; oc <<= S_INSTR_OP_SIZE; \
-    oc |= SInstrOP_##name; \
-    return oc; \
-  }
-
-#define ABs(name) \
-  static inline SInstr SInstr_##name(uint8_t A, int32_t Bs) { \
-    SInstr oc = 0; \
-    oc |= (uint32_t)Bs; oc <<= S_INSTR_A_SIZE;\
-    oc |= A; oc <<= S_INSTR_OP_SIZE; \
-    oc |= SInstrOP_##name; \
-    return oc; \
-  }
-
-#define ABu(name) \
-  static inline SInstr SInstr_##name(uint8_t A, uint32_t Bu) { \
-    SInstr oc = 0; \
-    oc |= Bu; oc <<= S_INSTR_A_SIZE;\
-    oc |= A; oc <<= S_INSTR_OP_SIZE; \
-    oc |= SInstrOP_##name; \
-    return oc; \
-  }
-
-#define Bss(name) \
-  static inline SInstr SInstr_##name(int32_t Bss) { \
-    SInstr oc = 0; \
-    oc |= Bss; oc <<= S_INSTR_OP_SIZE; \
-    oc |= SInstrOP_##name; \
-    return oc; \
-  }
-
-#define Buu(name) \
-  static inline SInstr SInstr_##name(uint32_t Buu) { \
-    SInstr oc = 0; \
-    oc |= Buu; oc <<= S_INSTR_OP_SIZE; \
-    oc |= SInstrOP_##name; \
-    return oc; \
-  }
-
-#define DEF_ENC_FUN(name, operands) operands(name)
-S_INSTR_DEFINE(DEF_ENC_FUN)
-#undef DEF_ENC_FUN
-
-#undef A__
-#undef AB_
-#undef ABC
-#undef ABu
-#undef ABs
-#undef Bss
-#undef Buu
-
-// OpCode field accessors
-
-#define SInstrGetOP(oc)  ( (oc) & S_INSTR_OP_MASK)
-
-#define SInstrGetA(oc)   (((oc) & S_INSTR_A_MASK)  >> S_INSTR_A_OFFS)
-#define SInstrGetB(oc)   (((oc) & S_INSTR_B_MASK)  >> S_INSTR_B_OFFS)
-#define SInstrGetC(oc)   (((oc) & S_INSTR_C_MASK)  >> S_INSTR_C_OFFS)
-
-#define SInstrGetBx(oc)  (((oc) & S_INSTR_Bx_MASK) >> S_INSTR_Bx_OFFS)
-#define SInstrGetBxx(oc) ((oc) >> S_INSTR_OP_SIZE)
-
-#define SInstrGetBs(oc)  (int32_t)SInstrGetBx(oc)
-//#define SInstrGetBss(oc) (int32_t)SInstrGetBxx(oc)
-#define SInstrGetBss(oc) (int32_t)((oc) & S_INSTR_Bxx_MASK)
-
-#define SInstrGetBu(oc)  (uint32_t)SInstrGetBx(oc)
-#define SInstrGetBuu(oc) (uint32_t)SInstrGetBxx(oc)
+// Buu:
+//
+//    31                       6 5    0
+//    00000000000000000000000000 000000   Buu=0, OP=0
+//    MSB                           LSB
+//
 
 #endif // S_INSTR_H_

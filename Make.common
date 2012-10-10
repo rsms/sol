@@ -1,0 +1,48 @@
+SRCROOT    := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+HOSTARCH    = $(shell uname -m | sed s,i[3456789]86,ia32,)
+TARGETARCH := $(shell uname -m | sed s,i[3456789]86,ia32,)
+OS          = $(shell uname -s)
+
+# Dependencies
+DEPS_PREFIX           := $(SRCROOT)/deps
+
+# Build directories
+BUILD_PREFIX          := $(SRCROOT)/build
+INCLUDE_BUILD_PREFIX  := $(BUILD_PREFIX)/include
+TESTS_BUILD_PREFIX    := $(BUILD_PREFIX)/test
+LIB_BUILD_PREFIX      := $(BUILD_PREFIX)/lib
+BIN_BUILD_PREFIX      := $(BUILD_PREFIX)/bin
+
+OBJECT_DIR := $(BUILD_PREFIX)/.objs
+
+# Tools
+CC = clang
+CXXC = clang++
+LD = clang
+AR = ar
+
+# Compiler and Linker flags for all targets
+CFLAGS   += -Wall -g -MMD -I$(INCLUDE_BUILD_PREFIX)
+CXXFLAGS += -std=c++11 -fno-rtti
+#LDFLAGS  +=
+XXLDFLAGS += -lc++ -lstdc++
+
+# Compiler and Linker flags for release and debug targets (e.g. make DEBUG=1)
+ifneq ($(DEBUG),)
+	CFLAGS += -O0 -DFB_DEBUG=1 #-gdwarf2
+	#LDFLAGS +=
+else
+	CFLAGS += -O3 -DNDEBUG
+	#LDFLAGS +=
+endif
+
+# Functions
+
+# (call PubHeaderNames,<header_pub_dir>,<list of header files>) -> <list of pub header files>
+PubHeaderNames = $(patsubst %,$(1)/%,$(2))
+
+# (call FileDirs,<list of files>) -> <unique list of dirs>
+FileDirs = $(sort $(foreach fn,$(1),$(dir $(fn))))
+
+# (call SrcToObjects,<objdir>,<list of source files>) -> <list of objects>
+SrcToObjects = $(patsubst %,$(1)/%,$(2))
