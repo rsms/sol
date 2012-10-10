@@ -1,3 +1,14 @@
+// Scheduler -- maintains a queue of tasks which are executed in order of being
+// queued. A task's code is executed by the Virtual Machine. When a task's
+// execution is suspended with a "yield" status, the task is placed at the end
+// of the queue so that it can run again once other queued tasks have had a
+// chance to run. When a task is suspended with a "end" or "error" status, the
+// task is removed from the scheduler (unscheduled).
+//
+// To run a task, schedule it by calling `SSchedEnqueue` and then enter the
+// scheduler's runloop by calling `SSchedRunLoop`. `SSchedRunLoop` will return
+// when all queued tasks have been unscheduled.
+//
 #ifndef S_SCHED_H_
 #define S_SCHED_H_
 #include <sol/common.h>
@@ -10,23 +21,10 @@ typedef struct {
   size_t count; // Number of queued tasks
 } SSched;
 
-inline static SSched* SSchedCreate() {
-  SSched* s = (SSched*)malloc(sizeof(SSched));
-  s->qhead = 0;
-  s->qtail = 0;
-  s->count = 0;
-  return s;
-}
+SSched* SSchedCreate();
+void SSchedDestroy(SSched* s);
 
-inline static void SSchedDestroy(SSched* s) {
-  STask* t;
-  while ((t = s->qhead) != 0) {
-    s->qhead = t->next;
-    STaskDestroy(t);
-  }
-  free((void*)s);
-}
-
+// Add to tail (end of queue)
 inline static void SSchedEnqueue(SSched* s, STask* t) {
   // 1. []       --> [A -> x]
   // 2. [A -> x] --> [A -> B -> x]
@@ -41,6 +39,7 @@ inline static void SSchedEnqueue(SSched* s, STask* t) {
   ++s->count;
 }
 
+// Remove head (first in queue)
 inline static STask* SSchedDequeue(SSched* s) {
   // 1. [A -> x]      --> []
   // 2. [A -> B -> x] --> [B -> x]

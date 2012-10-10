@@ -16,6 +16,23 @@ void SSchedDump(SSched* s) {
   }
 }
 
+SSched* SSchedCreate() {
+  SSched* s = (SSched*)malloc(sizeof(SSched));
+  s->qhead = 0;
+  s->qtail = 0;
+  s->count = 0;
+  return s;
+}
+
+void SSchedDestroy(SSched* s) {
+  STask* t;
+  while ((t = s->qhead) != 0) {
+    s->qhead = t->next;
+    STaskDestroy(t);
+  }
+  free((void*)s);
+}
+
 void SSchedRunLoop(SSched* s) {
   STask* t;
   SSchedDump(s);

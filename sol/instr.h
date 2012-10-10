@@ -66,12 +66,12 @@ typedef enum {
 } S_OP_V_;
 
 // Macros to compose instructions
-#define S_INSTR_A(OP, A) \
+#define S_INSTR_A__(OP, A) \
   (((SInstr)(OP)) | \
    (((SInstr)(A) << S_INSTR_OP_SIZE) & S_INSTR_A_MASK) \
   )
 
-#define S_INSTR_AB(OP, A, B) \
+#define S_INSTR_AB_(OP, A, B) \
   (((SInstr)(OP)) | \
    (((SInstr)(A) << S_INSTR_OP_SIZE) & S_INSTR_A_MASK) | \
    (((SInstr)(B) << (S_INSTR_OP_SIZE + S_INSTR_A_SIZE)) & S_INSTR_B_MASK) \
@@ -173,5 +173,50 @@ typedef enum {
 //    00000000000000000000000000 000000   Buu=0, OP=0
 //    MSB                           LSB
 //
+
+// Define convenience functions for each instruction. These functions are
+// constant expressions, so they can be used as constant initializers. However,
+// they are not compile-time constants.
+#define FHEAD inline static SInstr S_UNUSED S_ALWAYS_INLINE S_PURE S_WUNUSEDR
+#define APPLY_ABC(name) \
+  FHEAD SInstr_##name(uint8_t A, uint16_t B, uint16_t C) { \
+    return S_INSTR_ABC(S_OP_##name, A, B, C); \
+  }
+#define APPLY_AB_(name) \
+  FHEAD SInstr_##name(uint8_t A, uint16_t B) { \
+    return S_INSTR_AB_(S_OP_##name, A, B); \
+  }
+#define APPLY_A__(name) \
+  FHEAD SInstr_##name(uint8_t A) { \
+    return S_INSTR_A__(S_OP_##name, A); \
+  }
+#define APPLY_ABu(name) \
+ FHEAD SInstr_##name(uint8_t A, uint32_t Bu) { \
+   return S_INSTR_ABu(S_OP_##name, A, Bu); \
+ }
+#define APPLY_ABs(name) \
+  FHEAD SInstr_##name(uint8_t A, int32_t Bs) { \
+    return S_INSTR_ABs(S_OP_##name, A, Bs); \
+  }
+#define APPLY_Buu(name) \
+  FHEAD SInstr_##name(uint32_t Buu) { \
+    return S_INSTR_Buu(S_OP_##name, Buu); \
+  }
+#define APPLY_Bss(name) \
+  FHEAD SInstr_##name(uint32_t Bss) { \
+    return S_INSTR_Bss(S_OP_##name, Bss); \
+  }
+#define APPLY(name, args) APPLY_##args(name)
+S_INSTR_DEFINE(APPLY)
+#undef APPLY
+#undef APPLY_ABC
+#undef APPLY_AB_
+#undef APPLY_A__
+#undef APPLY_ABu
+#undef APPLY_ABs
+#undef APPLY_Buu
+#undef APPLY_Bss
+#undef FHEAD
+
 
 #endif // S_INSTR_H_

@@ -1,34 +1,29 @@
+// Task -- represents a program that can be run. Tasks are supposed to be very
+// cheap so to allow creation of large amounts of tasks. A task can be seen as a
+// "thread" or "coroutine". A task has program code and a program counter (PC).
+// The PC is the "cursor" to the instruction-to-be executed next time the task
+// is scheduled by a scheduler and executed by the virtual machine. The virtual
+// machine will advance the task's PC as it executes a task's instructions.
+//
 #ifndef S_TASK_H_
 #define S_TASK_H_
 #include <sol/common.h>
 #include <sol/instr.h>
 
 typedef enum {
-  STaskStatusEnd = 0, // The task has ended normally
+  STaskStatusEnd = 0, // The task ended (and has been reset)
   STaskStatusError,   // The task was interrupted by a fault
-  STaskStatusYield,   // The task has yielded
+  STaskStatusYield,   // The task yielded
 } STaskStatus;
 
-// A task is an instance of a program and is executed by a scheduler
 typedef struct STask {
   SInstr *start;      // Oldest available instruction
   SInstr *pc;         // Current instruction (Program Counter)
-  SInstr *end;        // Last available instruction.
   struct STask* next; // Next task. Used by scheduler.
   // TODO: Registry
 } STask;
 
-inline static STask* STaskCreate(SInstr* instrv, size_t instrc) {
-  STask* t = (STask*)malloc(sizeof(STask));
-  t->start = instrv;
-  t->pc = instrv;
-  t->end = instrv+(instrc-1);
-  t->next = 0;
-  return t;
-}
-
-inline static void STaskDestroy(STask* t) {
-  free((void*)t);
-}
+STask* STaskCreate(SInstr* instrv, size_t instrc);
+void STaskDestroy(STask* t);
 
 #endif // S_TASK_H_

@@ -3,7 +3,7 @@ include ../Make.common
 # Sources
 cxx_sources :=
 
-c_sources :=    main.c vm.c sched.c
+c_sources :=    main.c vm.c sched.c task.c
 
 headers_pub :=  sol.h common.h debug.h stdint.h \
                 instr.h vm.h sched.h task.h

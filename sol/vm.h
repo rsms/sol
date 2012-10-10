@@ -1,3 +1,4 @@
+// Virtual Machine -- Executes instructions and advances a program's counter
 #ifndef S_VM_H_
 #define S_VM_H_
 #include <sol/common.h>

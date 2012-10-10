@@ -13,17 +13,25 @@
 #else
   #define S_ALWAYS_INLINE
 #endif
-
 #if __has_attribute(deprecated)
   #define S_DEPRECATED __attribute__((deprecated))
 #else
   #define S_DEPRECATED
 #endif
-
 #if __has_attribute(deprecated)
   #define S_UNUSED __attribute__((unused))
 #else
   #define S_UNUSED
+#endif
+#if __has_attribute(pure)
+  #define S_PURE __attribute__((pure))
+#else
+  #define S_PURE
+#endif
+#if __has_attribute(warn_unused_result)
+  #define S_WUNUSEDR __attribute__((warn_unused_result))
+#else
+  #define S_WUNUSEDR
 #endif
 
 #if __has_builtin(__builtin_unreachable)
@@ -35,6 +43,11 @@
   #define S_UNREACHABLE \
 assert(!"UNREACHABLE")
 #endif
+
+#define S_countof(a) (sizeof(a)/sizeof(*(a)))
+
+#define S_STR1(str) #str
+#define S_STR(str) S_STR1(str)
 
 #include <sol/stdint.h> // .. include <std{io,int,def,bool}>
 #include <assert.h>
