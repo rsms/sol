@@ -5,7 +5,7 @@
 // We currently only support LE archs with 32-bit or larger registers
 #if S_TARGET_ARCH_SIZE < 32
   #error "Unsupported target architecture: Register size too small"
-#elif S_TARGET_ENDIAN != S_ENDIAN_LITTE
+#elif !S_TARGET_LITTLE_ENDIAN
   #error "Unsupported target architecture: Big Endian"
 #endif
 

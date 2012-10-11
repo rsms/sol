@@ -2,9 +2,6 @@
 #error "This file should not be included directly"
 #endif
 
-#define S_ENDIAN_LITTE 0
-#define S_ENDIAN_BIG   1
-
 //-- begin S_TARGET_ARCH_*
 #if defined(__i386) || defined(__i386__) || defined(_M_IX86)
   #define S_TARGET_ARCH_X86 1
@@ -29,20 +26,24 @@
 #endif
 
 #if S_TARGET_ARCH_X64
-  #define S_TARGET_ARCH_NAME    "x64"
-  #define S_TARGET_ARCH_SIZE    64
-  #define S_TARGET_ENDIAN       S_ENDIAN_LITTE
+  #define S_TARGET_ARCH_NAME     "x64"
+  #define S_TARGET_ARCH_SIZE     64
+  #define S_TARGET_LITTLE_ENDIAN 1
 #elif S_TARGET_ARCH_X86
-  #define S_TARGET_ARCH_NAME    "x86"
-  #define S_TARGET_ARCH_SIZE    32
-  #define S_TARGET_ENDIAN       S_ENDIAN_LITTE
+  #define S_TARGET_ARCH_NAME     "x86"
+  #define S_TARGET_ARCH_SIZE     32
+  #define S_TARGET_LITTLE_ENDIAN 1
 #elif S_TARGET_ARCH_ARM
   #if defined(__ARMEB__)
     #error "Unsupported target architecture: Big endian ARM"
   #endif
-  #define S_TARGET_ARCH_NAME    "arm"
-  #define S_TARGET_ARCH_SIZE    32
-  #define S_TARGET_ENDIAN       S_ENDIAN_LITTE
+  #define S_TARGET_ARCH_NAME     "arm"
+  #define S_TARGET_ARCH_SIZE     32
+  #define S_TARGET_LITTLE_ENDIAN 1
+#else
+  #define S_TARGET_ARCH_NAME     "?"
+  #define S_TARGET_ARCH_SIZE     0
+  #define S_TARGET_LITTLE_ENDIAN 0
 #endif
 //-- end S_TARGET_ARCH_*
 
