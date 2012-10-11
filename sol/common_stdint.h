@@ -1,8 +1,9 @@
-#ifndef SOL_STDINT_H
-#define SOL_STDINT_H
+#ifndef S_COMMON_H_INSIDE_
+#error "This file should not be included directly"
+#endif
 
 #include <stddef.h>
-#include <stdio.h>
+#include <stdio.h>  // size_t, ssize_t, off_t
 
 #if defined(_WIN32) && !defined(__MINGW32__)
   typedef signed char int8_t;
@@ -18,6 +19,4 @@
 #else
   #include <stdint.h>
   #include <stdbool.h>
-#endif
-
 #endif

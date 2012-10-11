@@ -1,7 +1,7 @@
 #ifndef S_DEBUG_H_
 #define S_DEBUG_H_
 
-#include <sol/stdint.h>
+#include <sol/common.h>
 
 S_UNUSED static const char *SDFormatBin(uintmax_t x, size_t bitcount) {
   static char buf[9 * sizeof(uintmax_t) + 1] = {0}; // 9=8C+1SP

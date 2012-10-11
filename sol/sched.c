@@ -1,61 +1,70 @@
 #include "sched.h"
-#include "vm.h"
+#include "instr.h"
 
+#if S_DEBUG
 void SSchedDump(SSched* s) {
-  printf("SSched %p\n  head: ", s);
-  STask* t = s->qhead;
+  printf("[sched %p] run queue:", s);
+  STask* t = s->runq.head;
+  size_t count = 0;
   while (t != 0) {
-    printf("<STask %p> -> ", t);
+    printf(
+      "%s[task %p]%s",
+      (count++ % 4 == 0) ? "\n  " : "",
+      t,
+      (t->next) ? " -> " : ""
+    );
     t = t->next;
   }
-  printf("nil.\n  tail: ");
-  if (s->qtail != 0) {
-    printf("<STask %p>\n", s->qtail);
-  } else {
-    printf("nil\n");
-  }
+  printf("\n");
 }
+#else
+#define SSchedDump(x) ((void)0)
+#endif
 
 SSched* SSchedCreate() {
   SSched* s = (SSched*)malloc(sizeof(SSched));
-  s->qhead = 0;
-  s->qtail = 0;
-  s->count = 0;
+  s->runq = S_RUNQ_INIT;
   return s;
 }
 
 void SSchedDestroy(SSched* s) {
   STask* t;
-  while ((t = s->qhead) != 0) {
-    s->qhead = t->next;
+  SRunQPopEachHead(&s->runq, t) {
     STaskDestroy(t);
   }
   free((void*)s);
 }
 
-void SSchedRunLoop(SSched* s) {
+// For the sake of readability and structure, the `SSchedExec` function is
+// defined in a separate file
+#include "sched_exec.h"
+
+void SSchedRun(SSched* s) {
   STask* t;
+  SRunQ* runq = &s->runq;
+
   SSchedDump(s);
 
-  while ((t = s->qhead) != 0) {
+  while ((t = runq->head) != 0) {
     //printf("[sched] resuming <STask %p>\n", t);
-    int ts = SVMExec(t);
+    int ts = SSchedExec(t);
+
     switch (ts) {
       case STaskStatusError:
       // task ended from an error. Remove from scheduler.
       printf("Program error\n");
-      SSchedDequeue(s);
+      SRunQPopHead(runq);
       STaskDestroy(t);
       break;
 
     case STaskStatusEnd:
       // task ended. Remove from scheduler.
-      SSchedDequeue(s);
+      SRunQPopHead(runq);
       STaskDestroy(t);
       break;
 
     case STaskStatusYield:
-      SSchedRequeue(s);
+      SRunQPopHeadPushTail(runq);
       break;
 
     default:

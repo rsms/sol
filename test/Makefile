@@ -4,8 +4,8 @@
 override DEBUG = 1 # Always build tests in debug mode
 include ../Make.common
 
-bin_prefix := $(BIN_BUILD_PREFIX)/test
-object_dir = $(OBJECT_DIR)-test
+bin_prefix := $(TESTS_BUILD_PREFIX)
+object_dir = $(TESTS_BUILD_PREFIX)/.objs
 
 # Compiler and linker flags
 c_flags := $(CFLAGS)

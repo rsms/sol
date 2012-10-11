@@ -6,14 +6,23 @@ OS          = $(shell uname -s)
 # Dependencies
 DEPS_PREFIX           := $(SRCROOT)/deps
 
+# Build target type
+ifeq ($(strip $(DEBUG)),1)
+	BUILD_TARGET_TYPE = debug
+else
+	BUILD_TARGET_TYPE = release
+endif
+
 # Build directories
 BUILD_PREFIX          := $(SRCROOT)/build
-INCLUDE_BUILD_PREFIX  := $(BUILD_PREFIX)/include
+BUILD_TARGET_PREFIX   := $(BUILD_PREFIX)/$(BUILD_TARGET_TYPE)
 TESTS_BUILD_PREFIX    := $(BUILD_PREFIX)/test
-LIB_BUILD_PREFIX      := $(BUILD_PREFIX)/lib
-BIN_BUILD_PREFIX      := $(BUILD_PREFIX)/bin
+INCLUDE_BUILD_PREFIX  := $(BUILD_TARGET_PREFIX)/include
+LIB_BUILD_PREFIX      := $(BUILD_TARGET_PREFIX)/lib
+BIN_BUILD_PREFIX      := $(BUILD_TARGET_PREFIX)/bin
+DEBUG_BUILD_PREFIX    := $(BUILD_TARGET_PREFIX)/debug
 
-OBJECT_DIR := $(BUILD_PREFIX)/.objs
+OBJECT_DIR := $(BUILD_TARGET_PREFIX)/.objs
 
 # Tools
 CC = clang
@@ -21,28 +30,31 @@ CXXC = clang++
 LD = clang
 AR = ar
 
+# $(call UpperCase,foo_bar) -> FOO_BAR
+UpperCase = $(shell echo $(1) | tr a-z A-Z)
+
 # Compiler and Linker flags for all targets
-CFLAGS   += -Wall -g -MMD -I$(INCLUDE_BUILD_PREFIX)
+CFLAGS   += -Wall -g -std=c99 -MMD -I$(INCLUDE_BUILD_PREFIX) -arch $(TARGETARCH)
 CXXFLAGS += -std=c++11 -fno-rtti
-#LDFLAGS  +=
+LDFLAGS  += -arch $(TARGETARCH)
 XXLDFLAGS += -lc++ -lstdc++
 
 # Compiler and Linker flags for release and debug targets (e.g. make DEBUG=1)
-ifneq ($(DEBUG),)
-	CFLAGS += -O0 -DFB_DEBUG=1 #-gdwarf2
+ifeq ($(strip $(DEBUG)),1)
+	CFLAGS += -O0 -DS_DEBUG=1
 	#LDFLAGS +=
 else
-	CFLAGS += -O3 -DNDEBUG
+	CFLAGS += -O3 -DS_DEBUG=0 -DNDEBUG
 	#LDFLAGS +=
 endif
 
 # Functions
 
-# (call PubHeaderNames,<header_pub_dir>,<list of header files>) -> <list of pub header files>
+# $(call PubHeaderNames,<header_pub_dir>,<list of header files>) -> <list of pub header files>
 PubHeaderNames = $(patsubst %,$(1)/%,$(2))
 
-# (call FileDirs,<list of files>) -> <unique list of dirs>
+# $(call FileDirs,<list of files>) -> <unique list of dirs>
 FileDirs = $(sort $(foreach fn,$(1),$(dir $(fn))))
 
-# (call SrcToObjects,<objdir>,<list of source files>) -> <list of objects>
+# $(call SrcToObjects,<objdir>,<list of source files>) -> <list of objects>
 SrcToObjects = $(patsubst %,$(1)/%,$(2))

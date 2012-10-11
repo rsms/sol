@@ -1,8 +1,17 @@
-#include "vm.h"
-#include "instr.h"
+// Task program execution.
+//
+// Note: This file is internal and part of sched.c
+//
+// Note: There are some mixed names in here (SSched and SVM) since logically
+// this code is both part of the VM and the scheduler.
+//
+#include "task.h"
+#include "common.h"
 
 // Toggle to enable debug logging (activates `SVMDLog` macros.)
-#define S_VM_DEBUG_LOG 1
+#ifndef S_VM_DEBUG_LOG
+#define S_VM_DEBUG_LOG S_DEBUG
+#endif
 
 // Execution limit -- limits the number of instructions that can be executed by
 // a task in one scheduled run. Set to 0 to disable limiting. Since tasks are
@@ -10,17 +19,23 @@
 // large number of instructions without yielding. If a limit is set, then such
 // a task will be rescheduled (forced to yield), allowing other tasks to execute
 // some code.
+#ifndef S_VM_EXEC_LIMIT
 #define S_VM_EXEC_LIMIT 2
+#endif
 
-#include "vm_internal_debug.h"
+// Contains SVMDLog macros
+#include "sched_exec_debug.h"
 
-// Inspect generated code:
-// clang -I. -O2 -S -o sol/vm.s sol/vm.c
-// clang -I. -O2 -S -emit-llvm -o sol/vm.ll sol/vm.c
+// Inspect generated code by:
+//   make -C ./sol llvm_ir asm && $EDITOR build/debug/sol-asm/sched.{ll,s}
+// Or:
+//   clang -I. -O2 -std=c99 -S -o - sol/sched.c | $EDITOR
+//   clang -I. -O2 -std=c99 -S -emit-llvm -o - sol/sched.c | $EDITOR
+//
 
 int sticky; // XXX DEBUG "tricking" the compiler not to optimize away branches
 
-STaskStatus SVMExec(STask *task) {
+inline static STaskStatus S_ALWAYS_INLINE SSchedExec(STask *task) {
 
   // Local PC which we store back into `task` when returning
   SInstr *pc = task->pc;
@@ -107,7 +122,8 @@ STaskStatus SVMExec(STask *task) {
     #if S_VM_EXEC_LIMIT
     // Reached execution limit?
     if (++icounter >= S_VM_EXEC_LIMIT) {
-      SVMDLog("execution limit (" S_STR(S_VM_EXEC_LIMIT) ") reached -- yielding");
+      SVMDLog("execution limit (" S_STR(S_VM_EXEC_LIMIT)
+              ") reached -- yielding");
       task->pc = pc;
       return STaskStatusYield;
     }

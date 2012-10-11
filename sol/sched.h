@@ -1,76 +1,43 @@
-// Scheduler -- maintains a queue of tasks which are executed in order of being
-// queued. A task's code is executed by the Virtual Machine. When a task's
-// execution is suspended with a "yield" status, the task is placed at the end
-// of the queue so that it can run again once other queued tasks have had a
-// chance to run. When a task is suspended with a "end" or "error" status, the
-// task is removed from the scheduler (unscheduled).
+// Scheduler -- maintains a run queue of tasks which are executed in order.
 //
-// To run a task, schedule it by calling `SSchedEnqueue` and then enter the
-// scheduler's runloop by calling `SSchedRunLoop`. `SSchedRunLoop` will return
-// when all queued tasks have been unscheduled.
+// When a task's execution is suspended with a "yield" status, the task is
+// placed at the end of the queue so that it can run again once other queued
+// tasks have had a chance to run. When a task is suspended with a "end" or
+// "error" status, the task is removed from the scheduler (unscheduled).
+//
+// To run a task, schedule it by calling `SSchedTask` and then enter the
+// scheduler's runloop by calling `SSchedRun`. `SSchedRun` will return when all
+// queued tasks have been unscheduled.
 //
 #ifndef S_SCHED_H_
 #define S_SCHED_H_
 #include <sol/common.h>
-#include <sol/task.h>
+#include <sol/runq.h>
 
 // Task scheduler
 typedef struct {
-  STask* qhead; // Highest priority task
-  STask* qtail; // Lowest priority task
-  size_t count; // Number of queued tasks
+  SRunQ runq;
 } SSched;
 
+// Create a new scheduler
 SSched* SSchedCreate();
+
+// Destroy a scheduler. Effectively calls `STaskDestroy` on each task that is
+// still in the run queue.
 void SSchedDestroy(SSched* s);
 
-// Add to tail (end of queue)
-inline static void SSchedEnqueue(SSched* s, STask* t) {
-  // 1. []       --> [A -> x]
-  // 2. [A -> x] --> [A -> B -> x]
-  //    ...
-  STask* tail = s->qtail;
-  if (tail == 0) {
-    s->qhead = t;
-  } else {
-    tail->next = t;
-  }
-  s->qtail = t;
-  ++s->count;
+// Schedule a task `t` by adding it to the end of the run queue of scheduler
+// `s`. It's important not to schedule tasks that have already been scheduled.
+// Doing so might very well cause a crash.
+inline static void SSchedTask(SSched* s, STask* t) {
+  assert(t->next == 0);
+  SRunQPushTail(&s->runq, t);
 }
 
-// Remove head (first in queue)
-inline static STask* SSchedDequeue(SSched* s) {
-  // 1. [A -> x]      --> []
-  // 2. [A -> B -> x] --> [B -> x]
-  //    ...
-  STask* t = s->qhead;
-  if (t == s->qtail) {
-    s->qhead = 0;
-    s->qtail = 0;
-    s->count = 0;
-  } else {
-    s->qhead = t->next;
-    --s->count;
-  }
-  return t;
-}
+// Run the scheduler. This function exits when the run queue is empty.
+void SSchedRun(SSched* s);
 
-// Move head to tail
-inline static void SSchedRequeue(SSched* s) {
-  // 1. [A -> x]      --> [A -> x] (noop)
-  // 2. [A -> B -> x] --> [B -> A -> x]
-  //    ...
-  STask* t = s->qhead;
-  if (s->qtail != t) {
-    s->qtail->next = t;
-    s->qhead = t->next;
-    t->next = 0;
-    s->qtail = t;
-  }
-}
-
-void SSchedRunLoop(SSched* s);
+// Debugging: Dumps the state of scheduler `s` to stdout.
 void SSchedDump(SSched* s);
 
 #endif // S_SCHED_H_

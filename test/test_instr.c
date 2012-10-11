@@ -36,20 +36,20 @@ int main(int argc, const char** argv) {
 
 
   // Test AB instruction values
-  ins = S_INSTR_AB(S_OP_JUMP, S_INSTR_A_MAX, S_INSTR_B_MAX);
+  ins = S_INSTR_AB_(S_OP_JUMP, S_INSTR_A_MAX, S_INSTR_B_MAX);
   assert(SInstrGetOP(ins) == S_OP_JUMP);
   assert(SInstrGetA(ins) == S_INSTR_A_MAX);
   assert(SInstrGetB(ins) == S_INSTR_B_MAX);
   assert(SInstrGetC(ins) == 0);
 
-  ins = S_INSTR_AB(S_OP_JUMP, S_INSTR_A_MAX+2, S_INSTR_B_MAX);
+  ins = S_INSTR_AB_(S_OP_JUMP, S_INSTR_A_MAX+2, S_INSTR_B_MAX);
   assert(SInstrGetOP(ins) == S_OP_JUMP);
   assert(SInstrGetA(ins) != S_INSTR_A_MAX);
   assert(SInstrGetA(ins) != S_INSTR_A_MAX+2);
   assert(SInstrGetB(ins) == S_INSTR_B_MAX);
   assert(SInstrGetC(ins) == 0);
 
-  ins = S_INSTR_AB(S_OP_JUMP, S_INSTR_A_MAX, S_INSTR_B_MAX+2);
+  ins = S_INSTR_AB_(S_OP_JUMP, S_INSTR_A_MAX, S_INSTR_B_MAX+2);
   assert(SInstrGetOP(ins) == S_OP_JUMP);
   assert(SInstrGetA(ins) == S_INSTR_A_MAX);
   assert(SInstrGetB(ins) != S_INSTR_B_MAX);
@@ -58,13 +58,13 @@ int main(int argc, const char** argv) {
 
 
   // Test A instruction value
-  ins = S_INSTR_A(S_OP_JUMP, S_INSTR_A_MAX);
+  ins = S_INSTR_A__(S_OP_JUMP, S_INSTR_A_MAX);
   assert(SInstrGetOP(ins) == S_OP_JUMP);
   assert(SInstrGetA(ins) == S_INSTR_A_MAX);
   assert(SInstrGetB(ins) == 0);
   assert(SInstrGetC(ins) == 0);
 
-  ins = S_INSTR_A(S_OP_JUMP, S_INSTR_A_MAX+2);
+  ins = S_INSTR_A__(S_OP_JUMP, S_INSTR_A_MAX+2);
   assert(SInstrGetOP(ins) == S_OP_JUMP);
   assert(SInstrGetA(ins) != S_INSTR_A_MAX);
   assert(SInstrGetA(ins) != S_INSTR_A_MAX+2);

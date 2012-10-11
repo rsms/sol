@@ -1,11 +1,14 @@
 #include <sol/common.h>
 #include <sol/sched.h>
-#include <sol/debug.h>
+#include <sol/log.h>
+#include <sol/host.h>
 
 //static const SInstr load_instr1 = SInstr_LOADK(0, 1);
 static const SInstr load_instr = S_INSTR_ABu(S_OP_LOADK, 0, 1);
 
 int main(int argc, const char** argv) {
+  printf("Sol " S_VERSION_STRING " " S_TARGET_ARCH_NAME "\n");
+  //SLogD("SHostAvailCPUCount: %u", SHostAvailCPUCount());
 
   // i32 x = 10
   // while x > 0
@@ -24,18 +27,14 @@ int main(int argc, const char** argv) {
 
   SSched* sched = SSchedCreate();
 
-  // Three instances of the same program
-  STask* task1 = STaskCreate(opcodes, S_countof(opcodes));
-  STask* task2 = STaskCreate(opcodes, S_countof(opcodes));
-  STask* task3 = STaskCreate(opcodes, S_countof(opcodes));
-
-  SSchedEnqueue(sched, task1);
-  SSchedEnqueue(sched, task2);
-  SSchedEnqueue(sched, task3);
+  // Schedule several tasks running the same program
+  SSchedTask(sched, STaskCreate(opcodes, S_countof(opcodes)));
+  SSchedTask(sched, STaskCreate(opcodes, S_countof(opcodes)));
+  SSchedTask(sched, STaskCreate(opcodes, S_countof(opcodes)));
   
-  SSchedRunLoop(sched);
-  SSchedDestroy(sched);
+  SSchedRun(sched);
 
+  SSchedDestroy(sched);
   printf("Scheduler runloop exited.\n");
   return 0;
 }
