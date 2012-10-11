@@ -2,6 +2,13 @@
 #define S_INSTR_H_
 #include <sol/common.h>
 
+// We currently only support LE archs with 32-bit or larger registers
+#if S_TARGET_ARCH_SIZE < 32
+  #error "Unsupported target architecture: Register size too small"
+#elif S_TARGET_ENDIAN != S_ENDIAN_LITTE
+  #error "Unsupported target architecture: Big Endian"
+#endif
+
 //
 // One instruction is 32 bits:
 typedef uint32_t SInstr;
