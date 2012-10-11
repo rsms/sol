@@ -1,7 +1,7 @@
-SRCROOT    := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
-HOSTARCH    = $(shell uname -m | sed s,i[3456789]86,ia32,)
-TARGETARCH := $(shell uname -m | sed s,i[3456789]86,ia32,)
-OS          = $(shell uname -s)
+SRCROOT     := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+HOST_ARCH    = $(shell uname -m | sed s,i[3456789]86,ia32,)
+TARGET_ARCH := $(shell uname -m | sed s,i[3456789]86,ia32,)
+HOST_OS      = $(shell uname -s)
 
 # Dependencies
 DEPS_PREFIX           := $(SRCROOT)/deps
@@ -14,15 +14,15 @@ else
 endif
 
 # Build directories
-BUILD_PREFIX          := $(SRCROOT)/build
-BUILD_TARGET_PREFIX   := $(BUILD_PREFIX)/$(BUILD_TARGET_TYPE)
-TESTS_BUILD_PREFIX    := $(BUILD_PREFIX)/test
-INCLUDE_BUILD_PREFIX  := $(BUILD_TARGET_PREFIX)/include
-LIB_BUILD_PREFIX      := $(BUILD_TARGET_PREFIX)/lib
-BIN_BUILD_PREFIX      := $(BUILD_TARGET_PREFIX)/bin
-DEBUG_BUILD_PREFIX    := $(BUILD_TARGET_PREFIX)/debug
+BASE_BUILD_PREFIX     := $(SRCROOT)/build
+BUILD_PREFIX          := $(BASE_BUILD_PREFIX)/$(BUILD_TARGET_TYPE)
+TESTS_BUILD_PREFIX    := $(BASE_BUILD_PREFIX)/test
+INCLUDE_BUILD_PREFIX  := $(BUILD_PREFIX)/include
+LIB_BUILD_PREFIX      := $(BUILD_PREFIX)/lib
+BIN_BUILD_PREFIX      := $(BUILD_PREFIX)/bin
+DEBUG_BUILD_PREFIX    := $(BUILD_PREFIX)/debug
 
-OBJECT_DIR := $(BUILD_TARGET_PREFIX)/.objs
+OBJECT_DIR := $(BUILD_PREFIX)/.objs
 
 # Tools
 CC = clang
@@ -34,9 +34,10 @@ AR = ar
 UpperCase = $(shell echo $(1) | tr a-z A-Z)
 
 # Compiler and Linker flags for all targets
-CFLAGS   += -Wall -g -std=c99 -MMD -I$(INCLUDE_BUILD_PREFIX) -arch $(TARGETARCH)
+CFLAGS   += -Wall -g -std=c99 -MMD -I$(INCLUDE_BUILD_PREFIX) \
+            -arch $(TARGET_ARCH)
 CXXFLAGS += -std=c++11 -fno-rtti
-LDFLAGS  += -arch $(TARGETARCH)
+LDFLAGS  += -arch $(TARGET_ARCH)
 XXLDFLAGS += -lc++ -lstdc++
 
 # Compiler and Linker flags for release and debug targets (e.g. make DEBUG=1)
