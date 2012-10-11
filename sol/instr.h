@@ -51,7 +51,7 @@ typedef uint32_t SInstr;
 //
 #define S_INSTR_DEFINE(_) \
   _(RETURN,     AB_) /* return R(A), ... ,R(A+B-2) */\
-  _(YIELD,      AB_) /* suspend and reschedule */\
+  _(YIELD,      ABu) /* suspend and reschedule */\
   _(MOVE,       AB_) /* R(A) = R(B) */\
   _(LOADK,      ABu) /* R(A) = K(Bu) */\
   _(ADDI,       ABC) /* R(A) = RK(B) + RK(C) */\

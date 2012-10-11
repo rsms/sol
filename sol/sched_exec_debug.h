@@ -26,15 +26,15 @@
     ##__VA_ARGS__ \
   )
 
-#define SVMDLogOpA SVMDLogOp(    " A:     %3u", (uint8_t)SInstrGetA(*pc))
-#define SVMDLogOpAB() SVMDLogOp( " A,B:   %3u, %3u", \
+#define SVMDLogOpA SVMDLogOp(    " A:   %3u", (uint8_t)SInstrGetA(*pc))
+#define SVMDLogOpAB() SVMDLogOp( " AB:  %3u, %3u", \
   (uint8_t)SInstrGetA(*pc), (uint16_t)SInstrGetB(*pc))
-#define SVMDLogOpABC() SVMDLogOp(" A,B,C: %3u, %3u, %3u", \
+#define SVMDLogOpABC() SVMDLogOp(" ABC: %3u, %3u, %3u", \
   (uint8_t)SInstrGetA(*pc), (uint16_t)SInstrGetB(*pc), \
   (uint16_t)SInstrGetC(*pc))
-#define SVMDLogOpABs() SVMDLogOp(" A,Bs:  %3u, %6d", \
+#define SVMDLogOpABs() SVMDLogOp(" ABs: %3u, %6d", \
   (uint8_t)SInstrGetA(*pc), SInstrGetBs(*pc))
-#define SVMDLogOpABu() SVMDLogOp(" A,Bu:  %3u, %6u", \
+#define SVMDLogOpABu() SVMDLogOp(" ABu: %3u, %6u", \
   (uint8_t)SInstrGetA(*pc), SInstrGetBu(*pc))
-#define SVMDLogOpBss() SVMDLogOp(" Bss:   %8d", SInstrGetBss(*pc))
-#define SVMDLogOpBuu() SVMDLogOp(" Buu:   %8u", SInstrGetBuu(*pc))
+#define SVMDLogOpBss() SVMDLogOp(" Bss: %8d", SInstrGetBss(*pc))
+#define SVMDLogOpBuu() SVMDLogOp(" Buu: %8u", SInstrGetBuu(*pc))

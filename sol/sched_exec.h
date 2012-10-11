@@ -55,9 +55,21 @@ inline static STaskStatus S_ALWAYS_INLINE SSchedExec(STask *task) {
       return STaskStatusEnd;
     }
     case S_OP_YIELD: {
-      SVMDLogOpAB();
+      SVMDLogOpABu();
       task->pc = pc;
-      return STaskStatusYield;
+      switch (SInstrGetA(*pc)) {
+      case 1: {
+        // TODO: SInstrGetBu() <- FD the task is waiting for
+        return STaskStatusWait;
+      }
+      case 2: {
+        // TODO: SInstrGetBu() <- timer the task is waiting for
+        return STaskStatusWait;
+      }
+      default: {
+        return STaskStatusYield;
+      }
+      }
     }
     case S_OP_MOVE: {
       SVMDLogOpAB();
@@ -116,7 +128,7 @@ inline static STaskStatus S_ALWAYS_INLINE SSchedExec(STask *task) {
     }
     default:
       SVMDLogOp("unexpected operation");
-      S_UNREACHABLE;
+      return STaskStatusError;
     }
 
     #if S_VM_EXEC_LIMIT

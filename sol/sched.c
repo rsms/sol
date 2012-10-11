@@ -47,6 +47,13 @@ void SSchedRun(SSched* s) {
 
   while ((t = runq->head) != 0) {
     //printf("[sched] resuming <STask %p>\n", t);
+    #if S_VM_DEBUG_LOG
+    printf(
+        "[vm] ______________ __________ ____ _______ ____ ______________\n"
+        "[vm] Task           PC         Op#  Op      Values\n"
+    );// [vm] 0x7fd431c03930 1          [10] LT      ABC:   0, 255,   0
+    #endif
+
     int ts = SSchedExec(t);
 
     switch (ts) {
@@ -65,6 +72,13 @@ void SSchedRun(SSched* s) {
 
     case STaskStatusYield:
       SRunQPopHeadPushTail(runq);
+      break;
+
+    case STaskStatusWait:
+      SRunQPopHead(runq);
+      // But don't destroy as the task will be scheduled back in when whatever
+      // it's waiting for has arrived
+      S_NOT_IMPLEMENTED;
       break;
 
     default:

@@ -25,6 +25,19 @@
 
 #define S_countof(a) (sizeof(a)/sizeof(*(a)))
 
+// Terminate process with status 70 (EX_SOFTWARE), writing `fmt` with optional
+// arguments to stderr.
+#define S_FATAL(fmt, ...) \
+  errx(70, "FATAL: " fmt " at " __FILE__ ":" S_STR(__LINE__), ##__VA_ARGS__)
+
+// Print `fmt` with optional arguments to stderr, and abort() process causing
+// EXC_CRASH/SIGABRT.
+#define S_CRASH(fmt, ...) do { \
+    fprintf(stderr, "CRASH: " fmt " at " __FILE__ ":" S_STR(__LINE__) "\n", \
+      ##__VA_ARGS__); \
+    abort(); \
+  } while (0)
+
 // Attributes
 #ifndef __has_attribute
   #define __has_attribute(x) 0
@@ -55,19 +68,22 @@
 #endif
 #if __has_builtin(__builtin_unreachable)
   #define S_UNREACHABLE do { \
-    assert(!"UNREACHABLE"); \
+    assert(!"Declared S_UNREACHABLE but was reached"); \
     __builtin_unreachable(); \
   } while(0)
 #else
   #define S_UNREACHABLE \
-assert(!"UNREACHABLE")
+    assert(!"Declared S_UNREACHABLE but was reaced")
 #endif
+
+#define S_NOT_IMPLEMENTED S_FATAL("NOT IMPLEMENTED in %s", __PRETTY_FUNCTION__)
 
 #include <sol/common_stdint.h> // .. include <std{io,int,def,bool}>
 #include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <err.h>
 
 #if S_HOST_OS_POSIX
   #include <unistd.h>

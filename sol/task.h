@@ -11,9 +11,10 @@
 #include <sol/instr.h>
 
 typedef enum {
-  STaskStatusEnd = 0, // The task ended (and has been reset)
-  STaskStatusError,   // The task was interrupted by a fault
-  STaskStatusYield,   // The task yielded
+  STaskStatusError = 0, // The task was interrupted by a fault
+  STaskStatusEnd,       // The task ended (and has been reset)
+  STaskStatusYield,     // The task yielded
+  STaskStatusWait,      // The task yielded b/c it's waiting for I/O or timer
 } STaskStatus;
 
 typedef struct STask {
