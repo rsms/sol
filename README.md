@@ -35,11 +35,23 @@ Run tests and potentially build Sol and affected tests:
 
     make test
 
+### Build targets
+
+- (default) — Alias for "sol test"
+- `sol` — Build Sol
+- `test` — Build and run all unit tests
+- `clean` — Clean tests and clean the target type for sol (debug or not). Note that you need to pass the `DEBUG=1` flag to `make clean` to cause cleaning of debug builds. To remove everything that has been generated, simply `rm -rf ./build`.
+
+Sol specific targets (i.e. for `make -C ./sol`):
+
+- `llvm_ir` — Compile all source files to LLVM IR assembly, placed in `<BUILD_PREFIX>/debug/sol-asm/<name>.ll`
+- `asm` — Compile all source files to target assembly, placed in `<BUILD_PREFIX>/debug/sol-asm/<name>.s`
+
 ### Build flags
 
 Special flags that can be passed to make (e.g. `make FLAG=VALUE ...`):
 
-- `DEBUG=1|0` — When set to "1", build without optimizations, with debug symbols, with debug logging and with assertions. Defaults to "0", which causes building of "release" products (optimizations enabled, no debug logging and no assertions). Note that you need to pass this flag for `make clean` as the `clean` target will only clean the products for either "debug" or "release". To remove everything, simply `rm -rf ./build`.
+- `DEBUG=1|0` — When set to "1", build without optimizations, with debug symbols, with debug logging and with assertions. Defaults to "0", which causes building of "release" products (optimizations enabled, no debug logging and no assertions).
 
 - `TARGET_ARCH=NAME` — Set the architecture to build for. Valid values for `NAME` depends on the compiler. Defaults to the host architecture (as reported by `shell uname -m`). For instance, to build an IA32 product on a x64 system: `make TARGET_ARCH=i386`.
 
