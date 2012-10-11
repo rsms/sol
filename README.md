@@ -35,6 +35,19 @@ Run tests and potentially build Sol and affected tests:
 
     make test
 
+### Build flags
+
+Special flags that can be passed to make (e.g. `make FLAG=VALUE ...`):
+
+- `DEBUG=1|0` — When set to "1", build without optimizations, with debug symbols, with debug logging and with assertions. Defaults to "0", which causes building of "release" products (optimizations enabled, no debug logging and no assertions). Note that you need to pass this flag for `make clean` as the `clean` target will only clean the products for either "debug" or "release". To remove everything, simply `rm -rf ./build`.
+
+- `TARGET_ARCH=NAME` — Set the architecture to build for. Valid values for `NAME` depends on the compiler. Defaults to the host architecture (as reported by `shell uname -m`). For instance, to build an IA32 product on a x64 system: `make TARGET_ARCH=i386`.
+
+- `BUILD_PREFIX` — Base directory for products. Defaults to `<BUILD_PREFIX>/<DEBUG ? debug : release>`.
+
+- `BASE_BUILD_PREFIX` — Base directory for tests and products. Defaults to `./build`.
+
+- `TESTS_BUILD_PREFIX` — Base directory for generated tests. Defaults to `<BUILD_PREFIX>/test`.
 
 # MIT License
 
