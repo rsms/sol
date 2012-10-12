@@ -33,17 +33,17 @@ int main(int argc, const char** argv) {
   // 4  goto 1
   // 5  return
 
-  // Constants ("0", "1" and "5")
+  // Constants
   SValue constants[] = {
-    SValueNumber(0),
     SValueNumber(5),
+    SValueNumber(0),
     SValueNumber(1),
   };
 
   // Instructions
   SInstr instructions[] = {
-    SInstr_LOADK(0, 1),        // 0  R(0) = RK(1)
-    SInstr_LE(0, 0, 255),      // 1  if (RK(0) <= RK(k+0)) else PC++
+    SInstr_LOADK(0, 0),        // 0  R(0) = K(0)
+    SInstr_LE(0, 0, 255+1),    // 1  if (RK(0) <= RK(k+1)) else PC++
     SInstr_JUMP(3),            // 2    PC += 3 to RETURN
     SInstr_SUB(0, 0, 255+2),   // 3    R(0) = R(0) - RK(k+1)
     SInstr_YIELD(0, 0),        // 4    yield 0  ; A=yield cpu, Bu=ignored

@@ -35,8 +35,6 @@
 //   clang -I. -O2 -std=c99 -S -emit-llvm -o - sol/sched.c | $EDITOR
 //
 
-int sticky; // XXX DEBUG "tricking" the compiler not to optimize away branches
-
 // RK_(index)
 inline static SValue S_ALWAYS_INLINE
 RK_(uint16_t index, SValue* constants, SValue* registry) {
