@@ -7,6 +7,8 @@
 //
 #include "task.h"
 #include "common.h"
+#include "vm.h"
+#include "log.h"
 
 // Toggle to enable debug logging (activates `SVMDLog` macros.)
 #ifndef S_VM_DEBUG_LOG
@@ -20,7 +22,7 @@
 // a task will be rescheduled (forced to yield), allowing other tasks to execute
 // some code.
 #ifndef S_VM_EXEC_LIMIT
-#define S_VM_EXEC_LIMIT 2
+#define S_VM_EXEC_LIMIT 100
 #endif
 
 // Contains SVMDLog macros
@@ -35,10 +37,34 @@
 
 int sticky; // XXX DEBUG "tricking" the compiler not to optimize away branches
 
-inline static STaskStatus S_ALWAYS_INLINE SSchedExec(STask *task) {
+// RK_(index)
+inline static SValue S_ALWAYS_INLINE
+RK_(uint16_t index, SValue* constants, SValue* registry) {
+  return (index < 255) ? registry[index] : constants[index - 255];
+}
+
+inline static STaskStatus S_ALWAYS_INLINE
+SSchedExec(SVM* vm, SSched* sched, STask *task) {
 
   // Local PC which we store back into `task` when returning
   SInstr *pc = task->pc;
+  if (pc == task->start) {
+    // Initial execution will cause the PC to move one step ahead, so we rewind
+    --pc;
+  }
+
+  // Local pointer to task's constants and registry
+  SValue* constants = task->constants;
+  SValue* registry = task->registry;
+
+  // Helpers for accessing constants and registers
+  #define K_B(i) (constants[SInstrGetB(i)])
+  #define K_C(i) (constants[SInstrGetC(i)])
+  #define R_A(i) (registry[SInstrGetA(i)])
+  #define R_B(i) (registry[SInstrGetB(i)])
+  #define R_C(i) (registry[SInstrGetC(i)])
+  #define RK_B(i) RK_(SInstrGetB(i), constants, registry)
+  #define RK_C(i) RK_(SInstrGetC(i), constants, registry)
 
   #if S_VM_EXEC_LIMIT
   // Number of instructions executed. We need to keep a dedicated counter since
@@ -49,11 +75,13 @@ inline static STaskStatus S_ALWAYS_INLINE SSchedExec(STask *task) {
 
   while (1) {
     switch (SInstrGetOP(*++pc)) {
+
     case S_OP_RETURN: {
       SVMDLogOpAB();
       task->pc = task->start;
       return STaskStatusEnd;
     }
+
     case S_OP_YIELD: {
       SVMDLogOpABu();
       task->pc = pc;
@@ -71,61 +99,107 @@ inline static STaskStatus S_ALWAYS_INLINE SSchedExec(STask *task) {
       }
       }
     }
-    case S_OP_MOVE: {
+
+    case S_OP_LOADK: {  // R(A) = K(Bu)
       SVMDLogOpAB();
-      sticky = S_OP_MOVE+100;
+      R_A(*pc) = K_B(*pc);
+      //SVMDLogInstrRVal(A, *pc);
       break;
     }
-    case S_OP_LOADK: {
-      SVMDLogOpABu();
-      sticky = S_OP_LOADK+100;
-      break;
-    }
-    case S_OP_ADDI: {
-      SVMDLogOpABC();
-      sticky = S_OP_ADDI+100;
-      break;
-    }
-    case S_OP_SUBI: {
-      SVMDLogOpABC();
-      sticky = S_OP_SUBI+100;
-      break;
-    }
-    case S_OP_MULI: {
-      SVMDLogOpABC();
-      sticky = S_OP_MULI+100;
-      break;
-    }
-    case S_OP_DIVI: {
-      SVMDLogOpABC();
-      sticky = S_OP_DIVI+100;
-      break;
-    }
-    case S_OP_NOT: {
+
+    case S_OP_MOVE: {  // R(A) = R(B)
       SVMDLogOpAB();
-      sticky = S_OP_NOT+100;
+      R_A(*pc) = R_B(*pc);
       break;
     }
-    case S_OP_EQ: {
+
+    case S_OP_ADD: { // R(A) = RK(B) + RK(C)
       SVMDLogOpABC();
-      sticky = S_OP_EQ+100;
+      R_A(*pc).value.n = RK_B(*pc).value.n + RK_C(*pc).value.n;
       break;
     }
-    case S_OP_LT: {
+
+    case S_OP_SUB: { // R(A) = RK(B) - RK(C)
       SVMDLogOpABC();
-      sticky = S_OP_LT+100;
+      // SVMDLogInstrRKVal(B, *pc);
+      // SVMDLogInstrRKVal(C, *pc);
+      // SVMDLogInstrRVal(A, *pc);
+      R_A(*pc).value.n = RK_B(*pc).value.n - RK_C(*pc).value.n;
       break;
     }
-    case S_OP_LE: {
+
+    case S_OP_MUL: { // R(A) = RK(B) * RK(C)
       SVMDLogOpABC();
-      sticky = S_OP_LE+100;
+      R_A(*pc).value.n = RK_B(*pc).value.n / RK_C(*pc).value.n;
       break;
     }
+
+    case S_OP_DIV: { // R(A) = RK(B) / RK(C)
+      SVMDLogOpABC();
+      R_A(*pc).value.n = RK_B(*pc).value.n / RK_C(*pc).value.n;
+      break;
+    }
+
+    case S_OP_NOT: { // R(A) = not R(B)
+      SVMDLogOpAB();
+      // TODO: Needs testing
+      R_A(*pc).value.n = ! R_B(*pc).value.n;
+      break;
+    }
+
+    case S_OP_EQ: { // if (RK(B) == RK(C)) JUMP else PC++
+      SVMDLogOpABC();
+      // TODO: Needs testing
+      if (RK_B(*pc).value.n == RK_C(*pc).value.n) {
+        ++pc;
+        assert(SInstrGetOP(*pc) == S_OP_JUMP);
+        SVMDLogOpBss();
+        pc += SInstrGetBss(*pc);
+      } else {
+        ++pc;
+      }
+      break;
+    }
+
+    case S_OP_LT: { // if (RK(B) < RK(C)) JUMP else PC++
+      SVMDLogOpABC();
+      // TODO: Needs testing
+      if (RK_B(*pc).value.n < RK_C(*pc).value.n) {
+        ++pc;
+        assert(SInstrGetOP(*pc) == S_OP_JUMP);
+        SVMDLogOpBss();
+        pc += SInstrGetBss(*pc);
+      } else {
+        ++pc;
+      }
+      break;
+    }
+
+    case S_OP_LE: { // if (RK(B) <= RK(C)) JUMP else PC++
+      SVMDLogOpABC();
+      //SVMDLogInstrRKVal(B, *pc);
+      //SVMDLogInstrRKVal(C, *pc);
+      if (RK_B(*pc).value.n <= RK_C(*pc).value.n) {
+        // Fetch the upcoming JUMP instruction (always follows a test)
+        //SLogD("(B <= B) = true");
+        ++pc;
+        assert(SInstrGetOP(*pc) == S_OP_JUMP);
+        SVMDLogOpBss();
+        pc += SInstrGetBss(*pc);
+      } else {
+        // Failed. Skip the JUMP instruction
+        //SLogD("(b <= c) = false");
+        ++pc;
+      }
+      break;
+    }
+
     case S_OP_JUMP: {
       SVMDLogOpBss();
-      sticky = S_OP_JUMP+100;
+      pc += SInstrGetBss(*pc);
       break;
     }
+
     default:
       SVMDLogOp("unexpected operation");
       return STaskStatusError;
@@ -141,6 +215,10 @@ inline static STaskStatus S_ALWAYS_INLINE SSchedExec(STask *task) {
     }
     #endif
   } // while (1)
+
+  #undef R_A
+  #undef R_B
+  #undef R_C
 
   S_UNREACHABLE;
   return STaskStatusError;

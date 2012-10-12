@@ -5,12 +5,14 @@ cxx_sources :=
 
 c_sources :=    main.c \
                 log.c host.c \
-                sched.c task.c
+                sched.c task.c \
+                value.c
 
 headers_pub :=  sol.h \
                 common.h common_target.h common_stdint.h \
                 debug.h log.h host.h \
-                instr.h vm.h sched.h runq.h task.h
+                vm.h sched.h runq.h task.h instr.h \
+                value.h
 
 # --- conf ---------------------------------------------------------------------
 

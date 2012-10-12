@@ -52,17 +52,27 @@ typedef uint32_t SInstr;
 #define S_INSTR_DEFINE(_) \
   _(RETURN,     AB_) /* return R(A), ... ,R(A+B-2) */\
   _(YIELD,      ABu) /* suspend and reschedule */\
+  _(LOADK,      AB_) /* R(A) = K(Bu) */\
   _(MOVE,       AB_) /* R(A) = R(B) */\
-  _(LOADK,      ABu) /* R(A) = K(Bu) */\
-  _(ADDI,       ABC) /* R(A) = RK(B) + RK(C) */\
-  _(SUBI,       ABC) /* R(A) = RK(B) - RK(C) */\
-  _(MULI,       ABC) /* R(A) = RK(B) * RK(C) */\
-  _(DIVI,       ABC) /* R(A) = RK(B) / RK(C) */\
+  _(ADD,        ABC) /* R(A) = RK(B) + RK(C) */\
+  _(SUB,        ABC) /* R(A) = RK(B) - RK(C) */\
+  _(MUL,        ABC) /* R(A) = RK(B) * RK(C) */\
+  _(DIV,        ABC) /* R(A) = RK(B) / RK(C) */\
   _(NOT,        AB_) /* R(A) = not R(B) */\
-  _(EQ,         ABC) /* if ((RK(B) == RK(C)) ~= A) then PC++ */\
-  _(LT,         ABC) /* if ((RK(B) < RK(C)) ~= A) then PC++ */\
-  _(LE,         ABC) /* if ((RK(B) <= RK(C)) ~= A) then PC++ */\
+  _(EQ,         ABC) /* if (RK(B) == RK(C)) JUMP else PC++ */\
+  _(LT,         ABC) /* if (RK(B) < RK(C)) JUMP else PC++ */\
+  _(LE,         ABC) /* if (RK(B) <= RK(C)) JUMP else PC++ */\
   _(JUMP,       Bss) /* PC += Bss */
+
+// Macros for accessing instruction field values
+#define SInstrGetOP(i)  ((uint8_t)((i) & S_INSTR_OP_MASK))
+#define SInstrGetA(i)   ((uint8_t)(((i) & S_INSTR_A_MASK)  >> S_INSTR_A_OFFS))
+#define SInstrGetB(i)   ((uint16_t)(((i) & S_INSTR_B_MASK)  >> S_INSTR_B_OFFS))
+#define SInstrGetC(i)   ((uint16_t)(((i) & S_INSTR_C_MASK)  >> S_INSTR_C_OFFS))
+#define SInstrGetBu(i)  ((uint32_t)(((i) & S_INSTR_Bu_MASK) >> S_INSTR_Bu_OFFS))
+#define SInstrGetBuu(i) ((uint32_t)((i) >> S_INSTR_OP_SIZE))
+#define SInstrGetBs(i)  ((int32_t)(SInstrGetBu(i) - (S_INSTR_Bu_MAX/2)))
+#define SInstrGetBss(i) ((int32_t)(SInstrGetBuu(i) - (S_INSTR_Buu_MAX/2)))
 
 // Each instruction will have a corresponding operation code identified by an
 // enum value "S_OP_<name>"
@@ -107,16 +117,6 @@ typedef enum {
 
 #define S_INSTR_Bss(OP, Bss) \
   S_INSTR_Buu((OP), ((uint32_t)(Bss) + (S_INSTR_Buu_MAX / 2)) )
-
-// Macros for accessing instruction field values
-#define SInstrGetOP(i)  ((uint8_t)((i) & S_INSTR_OP_MASK))
-#define SInstrGetA(i)   ((uint8_t)(((i) & S_INSTR_A_MASK)  >> S_INSTR_A_OFFS))
-#define SInstrGetB(i)   ((uint16_t)(((i) & S_INSTR_B_MASK)  >> S_INSTR_B_OFFS))
-#define SInstrGetC(i)   ((uint16_t)(((i) & S_INSTR_C_MASK)  >> S_INSTR_C_OFFS))
-#define SInstrGetBu(i)  ((uint32_t)(((i) & S_INSTR_Bu_MASK) >> S_INSTR_Bu_OFFS))
-#define SInstrGetBuu(i) ((uint32_t)((i) >> S_INSTR_OP_SIZE))
-#define SInstrGetBs(i)  ((int32_t)(SInstrGetBu(i) - (S_INSTR_Bu_MAX/2)))
-#define SInstrGetBss(i) ((int32_t)(SInstrGetBuu(i) - (S_INSTR_Buu_MAX/2)))
 
 // Instruction component constants
 // Operation code

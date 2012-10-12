@@ -13,6 +13,7 @@
 #define S_SCHED_H_
 #include <sol/common.h>
 #include <sol/runq.h>
+#include <sol/vm.h>
 
 // Task scheduler
 typedef struct {
@@ -35,7 +36,7 @@ inline static void SSchedTask(SSched* s, STask* t) {
 }
 
 // Run the scheduler. This function exits when the run queue is empty.
-void SSchedRun(SSched* s);
+void SSchedRun(SVM* vm, SSched* s);
 
 // Debugging: Dumps the state of scheduler `s` to stdout.
 void SSchedDump(SSched* s);

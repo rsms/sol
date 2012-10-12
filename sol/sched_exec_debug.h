@@ -13,6 +13,42 @@
     S_INSTR_DEFINE(OP_TABLE)
     #undef  OP_TABLE
   };
+
+  #define SVMDLogRVal(r) do { \
+    char __bufv[32]; \
+    SLogD("[vm] R(%u) = %s", (r), SValueRepr(__bufv, 32, &registry[(r)])); \
+  } while (0)
+
+  #define SVMDLogKVal(k) do { \
+    char __bufv[32]; \
+    SLogD("[vm] K(%u) = %s", (k), SValueRepr(__bufv, 32, &constants[(k)])); \
+  } while (0)
+
+  #define SVMDLogRKVal(rk) do { \
+    if (rk < 255) { \
+      SVMDLogRVal(rk); \
+    } else {\
+      SVMDLogKVal(rk - 255); \
+    } \
+  } while (0)
+
+  #define SVMDLogInstrRVal(regname, i) do { \
+    uint16_t r = SInstrGet##regname((i)); \
+    SVMDLogRVal(r); \
+  } while (0)
+
+  #define SVMDLogInstrKVal(regname, i) do { \
+    uint16_t k = SInstrGet##regname((i)); \
+    SVMDLogKVal(k); \
+  } while (0)
+
+  #define SVMDLogInstrRKVal(regname, i) do { \
+    uint16_t rk = SInstrGet##regname((i)); \
+    SVMDLogRKVal(rk); \
+  } while (0)
+
+// SLogD("R(%u) = %s", SInstrGetA(*pc), SValueRepr(__buf_##__LINE__, 32, &K_B(*pc)));
+
 #else  // S_VM_DEBUG_LOG
   #define SVMDLog(...) ((void)0)
 #endif // S_VM_DEBUG_LOG

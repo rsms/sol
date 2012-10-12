@@ -14,13 +14,6 @@ typedef struct {
 // Constant initializer
 #define S_RUNQ_INIT (SRunQ){0, 0, 0}
 
-// Initialize a run queue
-inline static void SRunQInit(SRunQ* q) {
-  q->head = 0;
-  q->tail = 0;
-  q->count = 0;
-}
-
 // Add to tail (end of queue)
 inline static void SRunQPushTail(SRunQ* q, STask* t) {
   // 1. []       --> [A -> x]

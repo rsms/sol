@@ -39,7 +39,7 @@ void SSchedDestroy(SSched* s) {
 // defined in a separate file
 #include "sched_exec.h"
 
-void SSchedRun(SSched* s) {
+void SSchedRun(SVM* vm, SSched* s) {
   STask* t;
   SRunQ* runq = &s->runq;
 
@@ -54,7 +54,7 @@ void SSchedRun(SSched* s) {
     );// [vm] 0x7fd431c03930 1          [10] LT      ABC:   0, 255,   0
     #endif
 
-    int ts = SSchedExec(t);
+    int ts = SSchedExec(vm, s, t);
 
     switch (ts) {
       case STaskStatusError:

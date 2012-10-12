@@ -9,6 +9,7 @@
 #define S_TASK_H_
 #include <sol/common.h>
 #include <sol/instr.h>
+#include <sol/value.h>
 
 typedef enum {
   STaskStatusError = 0, // The task was interrupted by a fault
@@ -18,13 +19,14 @@ typedef enum {
 } STaskStatus;
 
 typedef struct STask {
-  SInstr *start;      // Oldest available instruction
-  SInstr *pc;         // Current instruction (Program Counter)
+  SInstr* start;      // Oldest available instruction
+  SInstr* pc;         // Current instruction (Program Counter)
+  SValue* constants;  // Constants accessed by instructions
   struct STask* next; // Next task. Used by scheduler.
-  // TODO: Registry
+  SValue registry[10];
 } STask;
 
-STask* STaskCreate(SInstr* instrv, size_t instrc);
+STask* STaskCreate(SInstr* instrv, SValue* constants);
 void STaskDestroy(STask* t);
 
 #endif // S_TASK_H_
