@@ -13,6 +13,9 @@ void SLog__(
   if (color_output == -1) {
     color_output = !!isatty(1);
   }
+
+  flockfile(S_LOG_STREAM);
+
   if (prefix) {
     if (color_output) {
       fprintf(S_LOG_STREAM, "\e[%sm%s\e[0m ", prefix_style, prefix);
@@ -32,4 +35,7 @@ void SLog__(
     filename,
     line
   );
+
+  funlockfile(S_LOG_STREAM);
+  fflush(S_LOG_STREAM);
 }

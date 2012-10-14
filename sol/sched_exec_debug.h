@@ -54,7 +54,7 @@
 #endif // S_VM_DEBUG_LOG
 
 #define SVMDLogI(fmt, ...) SVMDLog("%-10zu " fmt, \
-  ((size_t)((pc) - (task->start))), ##__VA_ARGS__)
+  ((size_t)((pc) - (task->func->instructions))), ##__VA_ARGS__)
 
 #define SVMDLogOp(fmt, ...) \
   SVMDLogI("[%02u] %-6s " fmt, \

@@ -1,10 +1,9 @@
 #include "task.h"
 
-STask* STaskCreate(SInstr* instrv, SValue* constants) {
+STask* STaskCreate(SFunc* func) {
   STask* t = (STask*)malloc(sizeof(STask));
-  t->start = instrv;
-  t->pc = instrv;
-  t->constants = constants;
+  t->func = func;
+  t->pc = func->instructions;
   t->next = 0;
   return t;
 }

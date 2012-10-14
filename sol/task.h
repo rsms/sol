@@ -10,23 +10,24 @@
 #include <sol/common.h>
 #include <sol/instr.h>
 #include <sol/value.h>
+#include <sol/func.h>
 
 typedef enum {
   STaskStatusError = 0, // The task was interrupted by a fault
   STaskStatusEnd,       // The task ended (and has been reset)
   STaskStatusYield,     // The task yielded
-  STaskStatusWait,      // The task yielded b/c it's waiting for I/O or timer
+  STaskStatusWait,      // The task yielded, waiting for I/O
+  STaskStatusTimer,     // The task yielded, waiting for a timer
 } STaskStatus;
 
 typedef struct STask {
-  SInstr* start;      // Oldest available instruction
+  SFunc*  func;       // Main function
   SInstr* pc;         // Current instruction (Program Counter)
-  SValue* constants;  // Constants accessed by instructions
   struct STask* next; // Next task. Used by scheduler.
   SValue registry[10];
 } STask;
 
-STask* STaskCreate(SInstr* instrv, SValue* constants);
+STask* STaskCreate(SFunc* func);
 void STaskDestroy(STask* t);
 
 #endif // S_TASK_H_

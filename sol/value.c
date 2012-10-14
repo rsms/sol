@@ -1,8 +1,8 @@
 #include "value.h"
 
-const SValue SValueNil   = {SValueTNil, {0}};
-const SValue SValueTrue  = {SValueTTrue, { .n = 1 }};
-const SValue SValueFalse = {SValueTFalse, {0}};
+const SValue SValueNil   = {SValueTNil,   { .p = 0 }};
+const SValue SValueTrue  = {SValueTTrue,  { .n = 1 }};
+const SValue SValueFalse = {SValueTFalse, { .n = 0 }};
 
 char* SValueRepr(char* buf, size_t bufsize, SValue* v) {
   switch (v->type) {

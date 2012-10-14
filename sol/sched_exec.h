@@ -46,13 +46,13 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
 
   // Local PC which we store back into `task` when returning
   SInstr *pc = task->pc;
-  if (pc == task->start) {
+  if (pc == task->func->instructions) {
     // Initial execution will cause the PC to move one step ahead, so we rewind
     --pc;
   }
 
   // Local pointer to task's constants and registry
-  SValue* constants = task->constants;
+  SValue* constants = task->func->constants;
   SValue* registry = task->registry;
 
   // Helpers for accessing constants and registers
@@ -76,7 +76,7 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
 
     case S_OP_RETURN: {
       SVMDLogOpAB();
-      task->pc = task->start;
+      task->pc = task->func->instructions;
       return STaskStatusEnd;
     }
 
@@ -89,8 +89,22 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
         return STaskStatusWait;
       }
       case 2: {
-        // TODO: SInstrGetBu() <- timer the task is waiting for
-        return STaskStatusWait;
+        // TODO The task is waiting for a time. The task wants to be resumed at
+        // time TIME_MILLISECONDS:
+        //
+        //   TIME_MILLISECONDS = (
+        //     NOW + (
+        //       if Bu > (S_INSTR_Bu_MAX - S_INSTR_A_MAX) then
+        //         RK(Bu - (S_INSTR_Bu_MAX - S_INSTR_A_MAX))
+        //       else
+        //         Bu
+        //     )
+        //   )
+        //
+        // This allows passing many common values (up to 4.3 minutes) by value
+        // and larger values or dynamic values through contants or a register.
+        //
+        return STaskStatusTimer;
       }
       default: {
         return STaskStatusYield;

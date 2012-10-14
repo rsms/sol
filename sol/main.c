@@ -3,7 +3,7 @@
 #include <sol/log.h>
 #include <sol/host.h>
 #include <sol/vm.h>
-#include <sol/value.h>
+#include <sol/func.h>
 
 //static const SInstr load_instr1 = SInstr_LOADK(0, 1);
 static const SInstr load_instr = S_INSTR_ABu(S_OP_LOADK, 0, 1);
@@ -51,15 +51,20 @@ int main(int argc, const char** argv) {
     SInstr_RETURN(0, 0),       // 6  return
   };
 
+  // Make a function out of the program
+  SFunc* fun1 = SFuncCreate(constants, instructions);
+
+  // Create a scheduler
   SSched* sched = SSchedCreate();
 
   // Schedule several tasks running the same program
-  SSchedTask(sched, STaskCreate(instructions, constants));
-  SSchedTask(sched, STaskCreate(instructions, constants));
-  // SSchedTask(sched, STaskCreate(instructions, constants));
+  SSchedTask(sched, STaskCreate(fun1));
+  SSchedTask(sched, STaskCreate(fun1));
+  SSchedTask(sched, STaskCreate(fun1));
   
   SSchedRun(&vm, sched);
 
+  SFuncDestroy(fun1);
   SSchedDestroy(sched);
   printf("Scheduler runloop exited.\n");
   return 0;
