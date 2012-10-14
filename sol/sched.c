@@ -1,5 +1,6 @@
 #include "sched.h"
 #include "instr.h"
+#include "../deps/libev/ev.h"
 
 #if S_DEBUG
 void SSchedDump(SSched* s) {
@@ -43,6 +44,8 @@ void SSchedRun(SVM* vm, SSched* s) {
   STask* t;
   SRunQ* runq = &s->runq;
 
+  struct ev_loop* S_UNUSED evloop = ev_loop_new(EVFLAG_AUTO | EVFLAG_NOENV);
+
   SSchedDump(s);
 
   while ((t = runq->head) != 0) {
@@ -84,6 +87,10 @@ void SSchedRun(SVM* vm, SSched* s) {
     default:
       S_UNREACHABLE;
     }
-  }
 
+    ev_run(evloop, EVRUN_NOWAIT);
+    SLogD("evloop refs: %d", ev_refcount(evloop));
+  } // while there are queued tasks
+
+  ev_loop_destroy(evloop);
 }
