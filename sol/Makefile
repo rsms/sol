@@ -41,7 +41,7 @@ main_program = $(BIN_BUILD_PREFIX)/$(project_id)
 # Compiler and linker flags
 c_flags := $(CFLAGS)
 cxx_flags := $(CXXFLAGS)
-ld_flags := $(LDFLAGS)
+ld_flags := $(LDFLAGS) -L"$(BUILD_PREFIX)"/libev -lev
 xxld_flags := $(XXLDFLAGS)
 
 # --- targets ---------------------------------------------------------------------
