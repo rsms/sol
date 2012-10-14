@@ -1,0 +1,9 @@
+*.tar.gz
+libev/.*
+libev/Makefile
+libev/config.*
+libev/ev.*o
+libev/event.*o
+libev/libev.*a
+libev/libtool
+libev/stamp-*
