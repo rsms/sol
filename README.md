@@ -9,15 +9,209 @@ Each scheduler has one run queue in which tasks are queued for execution
 
     VM
       Scheduler N
-        Run queue
-          Tasks
+        RunQueue
+          Task
+            next -> Task...
+            ActivationRecord
+              next -> ActivationRecord...
+              Function
+                Constants
+                Instructions
+              ProgramCounter
+              Registry
+
       (Task migration)
 
 When more than one scheduler is running, tasks might migrate from one scheduler
 to another.
 
+## Examples
+
+The examples below are expressed in a simplified assembly language that is almost 1:1 with the C API code for defining these programs programatically and thus the assembly language itself should be considered irrelevant beyond explaining the instructions executed.
+
+- In the output, lines like these: `[vm] ______________ ...` denote whent he scheduler regains control after running a task and the task either returned or yielded. This is one "execution iteration". When running multiple tasks, you will usually see tasks interleved in round-robin order between these "execution iteration" marker lines.
+
+- In the output, lines starting with "..." are comments and/or simplifications and not part of the actual output.
+
+- In assembly comments ("; ..."), `R(x)` means "Register x", `RK(x)` means "Register x if x is less than 256 else Constant (x-255)", `K(x)` means "Constant x".
+
+- In assembly comments ("; ..."), `PC` signifies the "program counter" which is sort of a cursor to the instructions of a program. It is incremented by one for each instruction executed. Some instructions will further modify this counter, like for instance the `JUMP` instruction.
+
+### Example 1: `while x < 5 yield ...`
+
+While the variable x is greater than zero, decrement `x` by one and yield to the
+scheduler, letting other tasks run. Eventually return.
+
+```py
+def main():
+  x = 5
+  while (x > 0):
+    x = x - 1
+    yield
+  return
+```
+
+Assembly:
+
+```ll
+define main 0
+  CONST 5           ; K(0) = 5
+  CONST 0           ; K(1) = 0
+  CONST 1           ; K(2) = 1
+  entry:
+  LOADK  0  0       ; R(0) = K(0)
+  LE     0  0  256  ; (0 == RK(k+1) < RK(0)) ? continue else PC++
+  JUMP   3          ; PC += 3 to RETURN
+  SUB    0  0  257  ; R(0) = R(0) - RK(k+1)
+  YIELD  0  0  0    ; yield A=type=sched
+  JUMP   -5         ; PC -= 5 to LE
+  RETURN 0  0       ; return
+};
+```
+
+Output when running in debug mode:
+
+    $ build/debug/bin/sol
+    Sol 0.1.0 x64
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 0          LOADK   AB:    0,   0
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 3          SUB     ABC:   0,   0, 257
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 4          YIELD   ABC:   0,   0,   0
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 5          JUMP    Bss:       -5
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 3          SUB     ABC:   0,   0, 257
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 4          YIELD   ABC:   0,   0,   0
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    ...three more execution iterations identical to the above block...
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 5          JUMP    Bss:       -5
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 2          JUMP    Bss:        3
+    [vm] 0x7fdf28c03c00 0x7fdf28c000e0 6          RETURN  AB:    0,   0
+    Scheduler runloop exited.
+
+### Example 2: Function calls and timers
+
+This program uses two functions. The entry point is the `main` function which simply
+calls the `a` function with one argument '500'. The `main` function "sleeps" for
+the number of milliseconds passed to it as the first argument. The `main` function
+then returns the number "123" to the caller—`a`—which dumps register values and
+finally returns, causing the task to exit and subsequently the scheduler and the VM too.
+
+Assembly:
+
+```ll
+define a 1          ; Arguments: (R(0)=sleep_ms)
+  CONST  123        ; K(0) = 123
+  entry:
+  YIELD  1  0  0    ; yield A=type=timer, RK(B)=R(0)=arg0
+  LOADK  0  0       ; R(0) = K(0) = 123
+  RETURN 0  1       ; return R(0)..R(0) = R(0) = 123
+
+define main 0       ; Arguments: ()
+  CONST  @a         ; K(0) = <func a>
+  CONST  500        ; K(1) = 500 (used as argument to the "a" function)
+  entry:
+  LOADK  0  0       ; R(0) = K(0) = the a function
+  LOADK  1  1       ; R(1) = K(1) = 500
+  CALL   0  1  1    ; R(0)..R(0) = R(0)(R(1)..R(1)) = a(R(1))
+  DBGREG 0  1  0    ; VM debug function that dumps register values
+  RETURN 0  0       ; return
+```
+
+Output when running in debug mode:
+
+    $ time build/debug/bin/sol
+    Sol 0.1.0 x64
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7f8c9bc03bf0 0x7f8c9bc03910 0          LOADK   AB:    0,   0
+    [vm] 0x7f8c9bc03bf0 0x7f8c9bc03910 1          LOADK   AB:    1,   1
+    [vm] 0x7f8c9bc03bf0 0x7f8c9bc03910 2          CALL    ABC:   0,   1,   1
+    [vm] 0x7f8c9bc03bf0 0x7f8c9bc000e0 1          YIELD   ABC:   1,   0,   0
+    D Timer scheduled to trigger after 500.000000 ms (sched.c:81)
+    # ...time passes and in this case the scheduler is idling...
+    D Timer triggered -- scheduling task (sched.c:57)
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7f8c9bc03bf0 0x7f8c9bc000e0 2          LOADK   AB:    0,   0
+    [vm] 0x7f8c9bc03bf0 0x7f8c9bc000e0 3          RETURN  AB:    0,   1
+    [vm] 0x7f8c9bc03bf0 0x7f8c9bc03910 3          DBGREG 
+    D [vm] R(0) = 123.000000 (sched_exec.h:214)
+    D [vm] R(1) = 500.000000 (sched_exec.h:215)
+    D [vm] R(0) = 123.000000 (sched_exec.h:216)
+    [vm] 0x7f8c9bc03bf0 0x7f8c9bc03910 4          RETURN  AB:    0,   0
+    Scheduler runloop exited.
+
+    real  0m0.504s
+    user  0m0.001s
+    sys   0m0.001s
+
+### Example 3: Multitasking
+
+Here we run three tasks, each running the program in *Example 1*:
+
+    $ build/debug/bin/sol
+    Sol 0.1.0 x64
+    [sched 0x7fc219403930] run queue:
+      [task 0x7fc219403c00] -> [task 0x7fc219403cd0] -> [task 0x7fc219403da0]
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fc219403c00 0x7fc2194000e0 0          LOADK   AB:    0,   0
+    [vm] 0x7fc219403c00 0x7fc2194000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fc219403c00 0x7fc2194000e0 3          SUB     ABC:   0,   0, 257
+    [vm] 0x7fc219403c00 0x7fc2194000e0 4          YIELD   ABC:   0,   0,   0
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fc219403cd0 0x7fc2194000e0 0          LOADK   AB:    0,   0
+    [vm] 0x7fc219403cd0 0x7fc2194000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fc219403cd0 0x7fc2194000e0 3          SUB     ABC:   0,   0, 257
+    [vm] 0x7fc219403cd0 0x7fc2194000e0 4          YIELD   ABC:   0,   0,   0
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fc219403da0 0x7fc2194000e0 0          LOADK   AB:    0,   0
+    [vm] 0x7fc219403da0 0x7fc2194000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fc219403da0 0x7fc2194000e0 3          SUB     ABC:   0,   0, 257
+    [vm] 0x7fc219403da0 0x7fc2194000e0 4          YIELD   ABC:   0,   0,   0
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fc219403c00 0x7fc2194000e0 5          JUMP    Bss:       -5
+    [vm] 0x7fc219403c00 0x7fc2194000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fc219403c00 0x7fc2194000e0 3          SUB     ABC:   0,   0, 257
+    [vm] 0x7fc219403c00 0x7fc2194000e0 4          YIELD   ABC:   0,   0,   0
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    ...The above block of instruction is repeated three times in interleved
+       round-robin order for each task. Then:
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fc219403c00 0x7fc2194000e0 5          JUMP    Bss:       -5
+    [vm] 0x7fc219403c00 0x7fc2194000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fc219403c00 0x7fc2194000e0 2          JUMP    Bss:        3
+    [vm] 0x7fc219403c00 0x7fc2194000e0 6          RETURN  AB:    0,   0
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fc219403cd0 0x7fc2194000e0 5          JUMP    Bss:       -5
+    [vm] 0x7fc219403cd0 0x7fc2194000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fc219403cd0 0x7fc2194000e0 2          JUMP    Bss:        3
+    [vm] 0x7fc219403cd0 0x7fc2194000e0 6          RETURN  AB:    0,   0
+    [vm] ______________ ______________ __________ _______ ____ ______________
+    [vm] Task           Function       PC         Op      Values
+    [vm] 0x7fc219403da0 0x7fc2194000e0 5          JUMP    Bss:       -5
+    [vm] 0x7fc219403da0 0x7fc2194000e0 1          LE      ABC:   0,   0, 256
+    [vm] 0x7fc219403da0 0x7fc2194000e0 2          JUMP    Bss:        3
+    [vm] 0x7fc219403da0 0x7fc2194000e0 6          RETURN  AB:    0,   0
+    Scheduler runloop exited.
 
 ## Building
+
+Initial configuration
+
+  deps/libev-configure.s
 
 Build Sol and run tests (when in the same directory as this README file):
 
@@ -31,7 +225,7 @@ Run the debug version of Sol
 
     ./build/debug/bin/sol
 
-Run tests and potentially build Sol and affected tests:
+Build and run tests (potentially building Sol too):
 
     make test
 
