@@ -38,13 +38,13 @@ int main(int argc, const char** argv) {
   //   SValueNumber(1),
   // };
   // SInstr instructions[] = {
-  //   SInstr_LOADK(0, 0),        // 0  R(0) = K(0)
-  //   SInstr_LE(0, 0, 255+1),    // 1  if (RK(0) <= RK(k+1)) else PC++
-  //   SInstr_JUMP(3),            // 2    PC += 3 to RETURN
-  //   SInstr_SUB(0, 0, 255+2),   // 3    R(0) = R(0) - RK(k+1)
-  //   SInstr_YIELD(0, 0, 0),     // 4    yield 0  ; A=yield cpu
-  //   SInstr_JUMP(-5),           // 5    PC -= 5 to LE
-  //   SInstr_RETURN(0, 0),       // 6  return
+  //   SInstr_LOADK(0, 0),               // 0  R(0) = K(0)
+  //   SInstr_LE(0, 0, S_INSTR_RK_k+1),  // 1  if (RK(0) <= RK(k+1)) else PC++
+  //   SInstr_JUMP(3),                   // 2    PC += 3 to RETURN
+  //   SInstr_SUB(0, 0, S_INSTR_RK_k+2), // 3    R(0) = R(0) - RK(k+1)
+  //   SInstr_YIELD(0, 0, 0),            // 4    yield 0  ; A=yield cpu
+  //   SInstr_JUMP(-5),                  // 5    PC -= 5 to LE
+  //   SInstr_RETURN(0, 0),              // 6  return
   // };
   // SFunc* fun1 = SFuncCreate(constants, instructions);
 

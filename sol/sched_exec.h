@@ -42,7 +42,8 @@
 // RK_(index)
 inline static SValue S_ALWAYS_INLINE
 RK_(uint32_t index, SValue* constants, SValue* registry) {
-  return (index < 255) ? registry[index] : constants[index - 255];
+  return (index < S_INSTR_RK_k) ? registry[index]
+                                : constants[index - S_INSTR_RK_k];
 }
 
 inline static STaskStatus S_ALWAYS_INLINE

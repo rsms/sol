@@ -167,6 +167,18 @@ typedef enum {
 #define S_INSTR_Bss_MIN  (-(S_INSTR_Buu_MAX/2))
 #define S_INSTR_Bss_MAX  ((-S_INSTR_Bss_MIN)+1)
 
+// Number of addressable registers
+#define S_REG_MAX S_INSTR_A_MAX
+
+
+// This can be set to a lower number to allow more constants per closure, but
+// at the expense of more restrictive register access for instructions that read
+// RK(x) meaning either R(x) of x is less than S_INSTR_RK_k or K(x-S_INSTR_RK_k)
+#ifndef S_INSTR_RK_k
+  // Maximum value is S_REG_MAX
+  #define S_INSTR_RK_k S_REG_MAX
+#endif
+
 // Memory layout
 // ABC:
 //
