@@ -32,15 +32,11 @@ int main(int argc, const char** argv) {
   // 3    yield
   // 4  goto 1
   // 5  return
-
-  // Constants
   // SValue constants[] = {
   //   SValueNumber(5),
   //   SValueNumber(0),
   //   SValueNumber(1),
   // };
-
-  // Instructions
   // SInstr instructions[] = {
   //   SInstr_LOADK(0, 0),        // 0  R(0) = K(0)
   //   SInstr_LE(0, 0, 255+1),    // 1  if (RK(0) <= RK(k+1)) else PC++
@@ -50,6 +46,8 @@ int main(int argc, const char** argv) {
   //   SInstr_JUMP(-5),           // 5    PC -= 5 to LE
   //   SInstr_RETURN(0, 0),       // 6  return
   // };
+  // SFunc* fun1 = SFuncCreate(constants, instructions);
+
   //
   // // Timeout timer ("sleep") test program.
   // // 0  delay = 1200
