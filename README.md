@@ -53,7 +53,7 @@ def main():
 
 Assembly:
 
-```s
+```asm
 define main 0
   CONST 5           ; K(0) = 5
   CONST 0           ; K(1) = 0
@@ -104,7 +104,7 @@ finally returns, causing the task to exit and subsequently the scheduler and the
 
 Assembly:
 
-```s
+```asm
 define a 1          ; Arguments: (R(0)=sleep_ms)
   CONST  123        ; K(0) = 123
   entry:
