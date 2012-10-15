@@ -97,15 +97,15 @@ Output when running in debug mode:
 ### Example 2: Function calls and timers
 
 This program uses two functions. The entry point is the `main` function which simply
-calls the `a` function with one argument '500'. The `main` function "sleeps" for
-the number of milliseconds passed to it as the first argument. The `main` function
-then returns the number "123" to the caller—`a`—which dumps register values and
-finally returns, causing the task to exit and subsequently the scheduler and the VM too.
+calls the `kitten` function with one argument '500'. The `kitten` function "sleeps" for
+the number of milliseconds passed to it (as the first argument.) The `kitten` function
+then returns the number "123" to the caller—the `main` function—which dumps register values and
+finally returns, causing the task to exit and subsequently the scheduler and the VM too to exit.
 
 Assembly:
 
 ```asm
-define a 1          ; Arguments: (R(0)=sleep_ms)
+define kitten 1     ; Arguments: (R(0)=sleep_ms)
   CONST  123        ; K(0) = 123
   entry:
   YIELD  1  0  0    ; yield A=type=timer, RK(B)=R(0)=arg0
@@ -113,10 +113,10 @@ define a 1          ; Arguments: (R(0)=sleep_ms)
   RETURN 0  1       ; return R(0)..R(0) = R(0) = 123
 
 define main 0       ; Arguments: ()
-  CONST  @a         ; K(0) = <func a>
-  CONST  500        ; K(1) = 500 (used as argument to the "a" function)
+  CONST  @kitten    ; K(0) = <func kitten>
+  CONST  500        ; K(1) = 500
   entry:
-  LOADK  0  0       ; R(0) = K(0) = the a function
+  LOADK  0  0       ; R(0) = K(0) = the kitten function
   LOADK  1  1       ; R(1) = K(1) = 500
   CALL   0  1  1    ; R(0)..R(0) = R(0)(R(1)..R(1)) = a(R(1))
   DBGREG 0  1  0    ; VM debug function that dumps register values
