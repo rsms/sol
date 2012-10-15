@@ -18,6 +18,7 @@
 // Task scheduler
 typedef struct {
   SRunQ runq;
+  void* events_;
 } SSched;
 
 // Create a new scheduler

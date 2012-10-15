@@ -3113,10 +3113,10 @@ ev_unref (EV_P)
   --activecnt;
 }
 
-int
+int*
 ev_refcount (EV_P)
 {
-  return activecnt;
+  return &activecnt;
 }
 
 void

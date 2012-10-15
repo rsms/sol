@@ -78,6 +78,16 @@
 
 #define S_NOT_IMPLEMENTED S_FATAL("NOT IMPLEMENTED in %s", __PRETTY_FUNCTION__)
 
+#define S_MAX(a,b) \
+  ({ __typeof__ (a) _a = (a); \
+     __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+#define S_MIN(a,b) \
+  ({ __typeof__ (a) _a = (a); \
+     __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 #include <sol/common_stdint.h> // .. include <std{io,int,def,bool}>
 #include <assert.h>
 #include <stdlib.h>

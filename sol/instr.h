@@ -50,19 +50,25 @@ typedef uint32_t SInstr;
 // There is room for 64 operations and 256 registers (OP=6 bits, A=8 bits)
 //
 #define S_INSTR_DEFINE(_) \
-  _(RETURN,     AB_) /* return R(A), ... ,R(A+B-2) */\
-  _(YIELD,      ABu) /* suspend and reschedule */\
+  /* Constrol flow */ \
+  _(YIELD,      ABC) /* suspend and reschedule */\
+  _(JUMP,       Bss) /* PC += Bss */\
+  _(CALL,       ABC) /* R(A), ... ,R(A+C-1) := R(A)(R(A+1), ... ,R(A+B)) */\
+  _(RETURN,     AB_) /* return R(A), ... ,R(A+B-1) */\
+  /* Data */ \
   _(LOADK,      AB_) /* R(A) = K(Bu) */\
   _(MOVE,       AB_) /* R(A) = R(B) */\
+  _(DBGREG,     ABC) /* special: Debug dump register values */\
+  /* Arithmetic */ \
   _(ADD,        ABC) /* R(A) = RK(B) + RK(C) */\
   _(SUB,        ABC) /* R(A) = RK(B) - RK(C) */\
   _(MUL,        ABC) /* R(A) = RK(B) * RK(C) */\
   _(DIV,        ABC) /* R(A) = RK(B) / RK(C) */\
   _(NOT,        AB_) /* R(A) = not R(B) */\
-  _(EQ,         ABC) /* if (RK(B) == RK(C)) JUMP else PC++ */\
-  _(LT,         ABC) /* if (RK(B) < RK(C)) JUMP else PC++ */\
-  _(LE,         ABC) /* if (RK(B) <= RK(C)) JUMP else PC++ */\
-  _(JUMP,       Bss) /* PC += Bss */
+  _(EQ,         ABC) /* if (A == RK(B) == RK(C)) JUMP else PC++ */\
+  _(LT,         ABC) /* if (A == RK(B) < RK(C)) JUMP else PC++ */\
+  _(LE,         ABC) /* if (A == RK(B) <= RK(C)) JUMP else PC++ */
+  
 
 // Macros for accessing instruction field values
 #define SInstrGetOP(i)  ((uint8_t)((i) & S_INSTR_OP_MASK))

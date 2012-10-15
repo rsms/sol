@@ -7,17 +7,21 @@
 // 
 //
 #if S_VM_DEBUG_LOG
-  #define SVMDLog(fmt, ...) printf("[vm] %p " fmt "\n", task, ##__VA_ARGS__)
+  #define SVMDLog(fmt, ...) printf("[vm] %-14p %-14p " fmt "\n", \
+    task, task->ar->func, ##__VA_ARGS__)
+
   S_UNUSED static const char const* _debug_op_names[] = {
     #define OP_TABLE(name, _) #name,
     S_INSTR_DEFINE(OP_TABLE)
     #undef  OP_TABLE
   };
 
-  #define SVMDLogRVal(r) do { \
+  #define SVMDLogRRVal(reg, index) do { \
     char __bufv[32]; \
-    SLogD("[vm] R(%u) = %s", (r), SValueRepr(__bufv, 32, &registry[(r)])); \
+    SLogD("[vm] R(%u) = %s", (index), SValueRepr(__bufv, 32, &(reg)[(index)]));\
   } while (0)
+
+  #define SVMDLogRVal(r) SVMDLogRRVal(registry, r)
 
   #define SVMDLogKVal(k) do { \
     char __bufv[32]; \
@@ -54,13 +58,10 @@
 #endif // S_VM_DEBUG_LOG
 
 #define SVMDLogI(fmt, ...) SVMDLog("%-10zu " fmt, \
-  ((size_t)((pc) - (task->func->instructions))), ##__VA_ARGS__)
+  ((size_t)((pc) - (ar->func->instructions))), ##__VA_ARGS__)
 
 #define SVMDLogOp(fmt, ...) \
-  SVMDLogI("[%02u] %-6s " fmt, \
-    (uint8_t)SInstrGetOP(*pc), _debug_op_names[SInstrGetOP(*pc)], \
-    ##__VA_ARGS__ \
-  )
+  SVMDLogI("%-6s " fmt, _debug_op_names[SInstrGetOP(*pc)], ##__VA_ARGS__)
 
 #define SVMDLogOpA SVMDLogOp(    " A:   %3u", (uint8_t)SInstrGetA(*pc))
 #define SVMDLogOpAB() SVMDLogOp( " AB:  %3u, %3u", \

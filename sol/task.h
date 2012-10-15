@@ -20,12 +20,30 @@ typedef enum {
   STaskStatusTimer,     // The task yielded, waiting for a timer
 } STaskStatus;
 
+typedef struct SARec {
+  SFunc*        func;         // Function
+  SInstr*       pc;           // PC
+  SValue        registry[10]; // Registry
+  struct SARec* parent;       // Parent AR
+} SARec;
+
+SARec* SARecCreate(SFunc* func, SARec* parent);
+void SARecDestroy(SARec* ar);
+
 typedef struct STask {
-  SFunc*  func;       // Main function
-  SInstr* pc;         // Current instruction (Program Counter)
-  struct STask* next; // Next task. Used by scheduler.
-  SValue registry[10];
+  struct STask* next; // Next task (Used by scheduler.)
+  SARec*        ar;   // Current (top-of stack) AR, singly-linked LIFO list
 } STask;
+
+// 8+((8+8+(16*10)+8)*10) = 1.848 kB
+// 10 000 tasks = 18 MB
+
+// typedef struct STask {
+//   SFunc*  func;       // Main function
+//   SInstr* pc;         // Current instruction (Program Counter)
+//   struct STask* next; // Next task. Used by scheduler.
+//   SValue registry[10];
+// } STask;
 
 STask* STaskCreate(SFunc* func);
 void STaskDestroy(STask* t);

@@ -13,6 +13,10 @@ char* SValueRepr(char* buf, size_t bufsize, SValue* v) {
     snprintf(buf, bufsize, SNumberFormat, v->value.n);
     return buf;
   }
+  case SValueTFunc: {
+    snprintf(buf, bufsize, "<func %p>", v->value.p);
+    return buf;
+  }
   default: return memcpy(buf, "(?)", bufsize);
   }
 }
