@@ -1,3 +1,4 @@
+#line 1 "sched_exec.h"
 // Task program execution.
 //
 // Note: This file is internal and part of sched.c
@@ -22,7 +23,10 @@
 // a task will be rescheduled (forced to yield), allowing other tasks to execute
 // some code.
 #ifndef S_VM_EXEC_LIMIT
-#define S_VM_EXEC_LIMIT 100
+  #define S_VM_EXEC_LIMIT 100
+  #define S_VM_EXEC_LIMIT_INCR(increment) (icounter += (increment))
+#else
+  #define S_VM_EXEC_LIMIT_INCR(x) ((void)0)
 #endif
 
 // Contains SVMDLog macros
@@ -66,6 +70,10 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
   // Number of instructions executed. We need to keep a dedicated counter since
   // JUMPs offset `pc` and so there's no way of telling how many instructions
   // have been executed from comparing `pc` to for instance `task->pc`.
+  // Most operations have a cost of 1, but some operations, like CALL with
+  // arguments, might have a higher cost in which case that instruction's logic
+  // increments this counter in addition to the monotonic increment per op.
+  // The S_VM_EXEC_LIMIT_INCR macro is used for this purpose.
   size_t icounter = 0;
   #endif // S_VM_EXEC_LIMIT
 
@@ -125,6 +133,9 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
       // Copy any arguments into the new AR's registry
       uint16_t argc = SInstrGetB(*pc);
       if (argc != 0) {
+        // Add +1 to execution cost
+        S_VM_EXEC_LIMIT_INCR(1);
+
         // copy &reg[A+1],len from parent reg to new reg
         memcpy(
           (void*)ar->registry,
@@ -168,6 +179,9 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
         pc = ar->pc;
         constants = ar->func->constants;
         registry = ar->registry;
+
+        // Add +1 to execution cost
+        S_VM_EXEC_LIMIT_INCR(1);
 
         // Copy any return values into the new AR's registry
         uint16_t resc = SInstrGetB(*pc);
