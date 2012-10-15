@@ -210,7 +210,7 @@ Here we run three tasks, each running the program in *Example 1*:
 
 Initial configuration
 
-  deps/libev-configure.s
+    deps/libev-configure.sh
 
 Build Sol and run tests (when in the same directory as this README file):
 
