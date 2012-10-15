@@ -59,6 +59,7 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
 
   // Helpers for accessing constants and registers
   #define K_B(i)   (constants[SInstrGetB(i)])
+  #define K_Bu(i)  (constants[SInstrGetBu(i)])
   #define K_C(i)   (constants[SInstrGetC(i)])
   #define R_A(i)   (registry[SInstrGetA(i)])
   #define R_B(i)   (registry[SInstrGetB(i)])
@@ -213,8 +214,8 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
     } // case S_OP_RETURN
 
     case S_OP_LOADK: {  // R(A) = K(Bu)
-      SVMDLogOpAB();
-      R_A(*pc) = K_B(*pc);
+      SVMDLogOpABu();
+      R_A(*pc) = K_Bu(*pc);
       break;
     }
 

@@ -56,7 +56,7 @@ typedef uint32_t SInstr;
   _(CALL,       ABC) /* R(A), ... ,R(A+C-1) := R(A)(R(A+1), ... ,R(A+B)) */\
   _(RETURN,     AB_) /* return R(A), ... ,R(A+B-1) */\
   /* Data */ \
-  _(LOADK,      AB_) /* R(A) = K(Bu) */\
+  _(LOADK,      ABu) /* R(A) = K(Bu) */\
   _(MOVE,       AB_) /* R(A) = R(B) */\
   _(DBGREG,     ABC) /* special: Debug dump register values */\
   /* Arithmetic */ \
