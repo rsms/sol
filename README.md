@@ -53,7 +53,7 @@ def main():
 
 Assembly:
 
-```ll
+```s
 define main 0
   CONST 5           ; K(0) = 5
   CONST 0           ; K(1) = 0
@@ -66,7 +66,6 @@ define main 0
   YIELD  0  0  0    ; yield A=type=sched
   JUMP   -5         ; PC -= 5 to LE
   RETURN 0  0       ; return
-};
 ```
 
 Output when running in debug mode:
@@ -105,7 +104,7 @@ finally returns, causing the task to exit and subsequently the scheduler and the
 
 Assembly:
 
-```ll
+```s
 define a 1          ; Arguments: (R(0)=sleep_ms)
   CONST  123        ; K(0) = 123
   entry:
