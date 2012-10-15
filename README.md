@@ -37,7 +37,7 @@ The examples below are expressed in a simplified assembly language that is almos
 
 - In assembly comments ("; ..."), `PC` signifies the "program counter" which is sort of a cursor to the instructions of a program. It is incremented by one for each instruction executed. Some instructions will further modify this counter, like for instance the `JUMP` instruction.
 
-### Example 1: `while x < 5 yield ...`
+### Example 1: while x > 0 yield ...
 
 While the variable x is greater than zero, decrement `x` by one and yield to the
 scheduler, letting other tasks run. Eventually return.
