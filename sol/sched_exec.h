@@ -250,7 +250,7 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
 
     case S_OP_MUL: { // R(A) = RK(B) * RK(C)
       SVMDLogOpABC();
-      R_A(*pc).value.n = RK_B(*pc).value.n / RK_C(*pc).value.n;
+      R_A(*pc).value.n = RK_B(*pc).value.n * RK_C(*pc).value.n;
       break;
     }
 
