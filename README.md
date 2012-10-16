@@ -23,7 +23,7 @@ Each scheduler has one run queue in which tasks are queued for execution
       (Task migration)
 
 When more than one scheduler is running, tasks might migrate from one scheduler
-to another.
+to another. For a more in-depth discussion about the design, see ["Sol — a sunny little virtual machine"](http://rsms.me/2012/10/14/sol-a-sunny-little-virtual-machine.html).
 
 ## Examples
 
