@@ -55,6 +55,12 @@
 
 #else  // S_VM_DEBUG_LOG
   #define SVMDLog(...) ((void)0)
+  #define SVMDLogRRVal(reg, index) ((void)0)
+  #define SVMDLogRVal(r) ((void)0)
+  #define SVMDLogKVal(k) ((void)0)
+  #define SVMDLogInstrRVal(regname, i) ((void)0)
+  #define SVMDLogInstrKVal(regname, i) ((void)0)
+  #define SVMDLogInstrRKVal(regname, i) ((void)0)
 #endif // S_VM_DEBUG_LOG
 
 #define SVMDLogI(fmt, ...) SVMDLog("%-10zu " fmt, \
