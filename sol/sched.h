@@ -12,13 +12,16 @@
 #ifndef S_SCHED_H_
 #define S_SCHED_H_
 #include <sol/common.h>
-#include <sol/runq.h>
+#include <sol/task.h>
 #include <sol/vm.h>
 
 // Task scheduler
 typedef struct {
-  SRunQ runq;
-  void* events_;
+  STask* rhead;   // Run queue queue head
+  STask* rtail;   // Run queue queue tail
+  STask* whead;   // Waiting queue head
+  STask* wtail;   // Waiting queue tail
+  void*  events_;
 } SSched;
 
 // Create a new scheduler
@@ -30,16 +33,9 @@ void SSchedDestroy(SSched* s);
 
 // Schedule a task `t` by adding it to the end of the run queue of scheduler
 // `s`. It's important not to schedule tasks that have already been scheduled.
-// Doing so might very well cause a crash.
-inline static void SSchedTask(SSched* s, STask* t) {
-  assert(t->next == 0);
-  SRunQPushTail(&s->runq, t);
-}
+void SSchedTask(SSched* s, STask* t);
 
 // Run the scheduler. This function exits when the run queue is empty.
 void SSchedRun(SVM* vm, SSched* s);
-
-// Debugging: Dumps the state of scheduler `s` to stdout.
-void SSchedDump(SSched* s);
 
 #endif // S_SCHED_H_

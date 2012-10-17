@@ -48,6 +48,36 @@ int main(int argc, const char** argv) {
   // };
   // SFunc* fun1 = SFuncCreate(constants, instructions);
 
+  SValue constants[] = {
+    SValueNumber(5),
+    SValueNumber(0),
+    SValueNumber(1200),
+  };
+  SInstr instructions[] = {
+    SInstr_LOADK(0, 0),                 // R(0) = K(0)
+    SInstr_LE(0, 0, S_INSTR_RK_k+1),    // if (0 == RK(0) < RK(k+1)) else PC++
+    SInstr_JUMP(1),                     //   PC += 1 to RETURN
+    SInstr_YIELD(1, S_INSTR_RK_k+2, 0), // yield timeout (K(2) = after_ms)
+    SInstr_RETURN(0, 0),                // return
+  };
+  SFunc* fun1 = SFuncCreate(constants, instructions);
+
+  SValue constants2[] = {
+    SValueNumber(5),
+    SValueNumber(0),
+    SValueNumber(500),
+    SValueFunc(fun1),
+  };
+  SInstr instructions2[] = {
+    SInstr_LOADK(0, 0),                 // R(0) = K(0)
+    SInstr_LE(0, 0, S_INSTR_RK_k+1),    // if (0 == RK(0) < RK(k+1)) else PC++
+    SInstr_JUMP(2),                     //   PC += 2 to RETURN
+    SInstr_SPAWN(0, S_INSTR_RK_k+3),    // R(0) = spawn(RK(B))
+    SInstr_YIELD(1, S_INSTR_RK_k+2, 0), // yield timeout (K(2) = after_ms)
+    SInstr_RETURN(0, 0),                // return
+  };
+  SFunc* fun2 = SFuncCreate(constants2, instructions2);
+
   //
   // // Timeout timer ("sleep") test program.
   // // 0  delay = 1200
@@ -65,44 +95,44 @@ int main(int argc, const char** argv) {
   // // Make a function out of the program
   // SFunc* sleepfun = SFuncCreate(constants, instructions);
 
-  // Function calling
-  SValue a_constants[] = {
-    SValueNumber(123), // return value
-  };
-  SInstr a_instructions[] = {
-    // Arguments: (R(0)=sleep_ms)
-    SInstr_DBGREG(0, 0, 0),// debug
-    SInstr_YIELD(1, 0, 0), // yield timeout (RK(0) = after_ms)
-    SInstr_LOADK(0, 0),    // R(0) = K(0) = 123
-    SInstr_RETURN(0, 1),   // <- R(0)..R(0) = R(0) = 123
-  };
-  SFunc* a_fun = SFuncCreate(a_constants, a_instructions);
-  SValue b_constants[] = {
-    SValueFunc(a_fun),
-    SValueNumber(500), // argument to a_fun
-  };
-  SInstr b_instructions[] = {
-    SInstr_LOADK(0, 0),    // R(0) = K(0) = a_fun
-    SInstr_LOADK(1, 1),    // R(1) = K(1) = 500
-    //SInstr_DBGREG(0, 1, 1),// debug
-    SInstr_CALL(0, 1, 1),  // R(0)..R(0) = R(0)(R(1)..R(1)) = a_fun(R(1))
-    SInstr_DBGREG(0, 1, 0),// debug: So we can inspect a_fun's return value
-    SInstr_RETURN(0, 0),   // return
-  };
-  SFunc* b_fun = SFuncCreate(b_constants, b_instructions);
+  // // Function calling
+  // SValue a_constants[] = {
+  //   SValueNumber(123), // return value
+  // };
+  // SInstr a_instructions[] = {
+  //   // Arguments: (R(0)=sleep_ms)
+  //   SInstr_DBGREG(0, 0, 0),// debug
+  //   SInstr_YIELD(1, 0, 0), // yield timeout (RK(0) = after_ms)
+  //   SInstr_LOADK(0, 0),    // R(0) = K(0) = 123
+  //   SInstr_RETURN(0, 1),   // <- R(0)..R(0) = R(0) = 123
+  // };
+  // SFunc* a_fun = SFuncCreate(a_constants, a_instructions);
+  // SValue b_constants[] = {
+  //   SValueFunc(a_fun),
+  //   SValueNumber(500), // argument to a_fun
+  // };
+  // SInstr b_instructions[] = {
+  //   SInstr_LOADK(0, 0),    // R(0) = K(0) = a_fun
+  //   SInstr_LOADK(1, 1),    // R(1) = K(1) = 500
+  //   //SInstr_DBGREG(0, 1, 1),// debug
+  //   SInstr_CALL(0, 1, 1),  // R(0)..R(0) = R(0)(R(1)..R(1)) = a_fun(R(1))
+  //   SInstr_DBGREG(0, 1, 0),// debug: So we can inspect a_fun's return value
+  //   SInstr_RETURN(0, 0),   // return
+  // };
+  // SFunc* b_fun = SFuncCreate(b_constants, b_instructions);
 
   // Create a scheduler
   SSched* sched = SSchedCreate();
 
   // Schedule several tasks running the same program
-  SSchedTask(sched, STaskCreate(b_fun));
-  // SSchedTask(sched, STaskCreate(fun1));
-  // SSchedTask(sched, STaskCreate(fun1));
+  //SSchedTask(sched, STaskCreate(b_fun, 0));
+  //SSchedTask(sched, STaskCreate(fun1, 0));
+  SSchedTask(sched, STaskCreate(fun2, 0));
   
   SSchedRun(&vm, sched);
 
-  SFuncDestroy(b_fun);
-  SFuncDestroy(a_fun);
+  // SFuncDestroy(b_fun);
+  // SFuncDestroy(a_fun);
   SSchedDestroy(sched);
   printf("Scheduler runloop exited.\n");
   return 0;

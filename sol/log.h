@@ -16,16 +16,16 @@
 // * = excluded in release builds
 //
 #if S_DEBUG
-  #define STrace(fmt, ...) SLog_("-", "0;36", "%s", __PRETTY_FUNCTION__)
-  #define SLogD(fmt, ...)  SLog_("D", "0;34", fmt, ##__VA_ARGS__)
+  #define STrace(fmt, ...) SLog_("-", "0;36", 1, "%s", __PRETTY_FUNCTION__)
+  #define SLogD(fmt, ...)  SLog_("D", "0;34", 0, fmt, ##__VA_ARGS__)
 #else
   #define STrace() ((void)0)
   #define SLogD(...) ((void)0)
 #endif
-#define SLogW(fmt, ...)    SLog_("W", "0;33", fmt, ##__VA_ARGS__)
-#define SLogE(fmt, ...)    SLog_("E", "0;31", fmt, ##__VA_ARGS__)
+#define SLogW(fmt, ...)    SLog_("W", "0;33", 0, fmt, ##__VA_ARGS__)
+#define SLogE(fmt, ...)    SLog_("E", "0;31", 0, fmt, ##__VA_ARGS__)
 
-#define SLog(fmt, ...)     SLog_(0,   0,      fmt, ##__VA_ARGS__)
+#define SLog(fmt, ...)     SLog_(0,   0,      0, fmt, ##__VA_ARGS__)
 
 // -----
 
@@ -37,6 +37,7 @@ void SLog__(
   int line,
   const char *prefix,
   const char *prefix_style,
+  bool style_whole_line,
   const char *format,
   ...);
 

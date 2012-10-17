@@ -7,6 +7,7 @@ void SLog__(
     int line,
     const char *prefix,
     const char *prefix_style,
+    bool style_whole_line,
     const char *format,
     ...) {
   static int color_output = -1;
@@ -16,7 +17,13 @@ void SLog__(
 
   flockfile(S_LOG_STREAM);
 
-  if (prefix) {
+  if (style_whole_line && color_output) {
+    if (prefix) {
+      fprintf(S_LOG_STREAM, "\e[%sm%s ", prefix_style, prefix ? prefix : "");
+    } else {
+      fprintf(S_LOG_STREAM, "\e[%sm", prefix_style);
+    }
+  } else if (prefix) {
     if (color_output) {
       fprintf(S_LOG_STREAM, "\e[%sm%s\e[0m ", prefix_style, prefix);
     } else {

@@ -99,7 +99,7 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
         SNumber after_ms = RK_B(*pc).value.n;
         SSchedTimerStart(sched, task, after_ms, (SNumber)0);
 
-        return STaskStatusWait;
+        return STaskStatusSuspend;
       }
       default: {
         SVMDLogOp("unexpected yield type %u", SInstrGetA(*pc));
@@ -212,6 +212,16 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
         break;
       }
     } // case S_OP_RETURN
+
+    case S_OP_SPAWN: {  // R(A) = spawn(RK(B))
+      SVMDLogOpAB();
+      assert(RK_B(*pc).type == SValueTFunc);
+      SFunc* func = (SFunc*)RK_B(*pc).value.p;
+      STask* t = STaskCreate(func, task);
+      STaskRetain(task);
+      _RQPush(sched, t);
+      break;
+    }
 
     case S_OP_LOADK: {  // R(A) = K(Bu)
       SVMDLogOpABu();

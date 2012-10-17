@@ -66,6 +66,11 @@
 #else
   #define S_WUNUSEDR
 #endif
+#if __has_attribute(packed)
+  #define S_PACKED __attribute((packed))
+#else
+  #define S_PACKED
+#endif
 #if __has_builtin(__builtin_unreachable)
   #define S_UNREACHABLE do { \
     assert(!"Declared S_UNREACHABLE but was reached"); \

@@ -50,11 +50,12 @@ typedef uint32_t SInstr;
 // There is room for 64 operations and 256 registers (OP=6 bits, A=8 bits)
 //
 #define S_INSTR_DEFINE(_) \
-  /* Constrol flow */ \
+  /* Control flow */ \
   _(YIELD,      ABC) /* suspend and reschedule */\
   _(JUMP,       Bss) /* PC += Bss */\
   _(CALL,       ABC) /* R(A), ... ,R(A+C-1) := R(A)(R(A+1), ... ,R(A+B)) */\
   _(RETURN,     AB_) /* return R(A), ... ,R(A+B-1) */\
+  _(SPAWN,      AB_) /* R(A) = spawn(RK(B)) */\
   /* Data */ \
   _(LOADK,      ABu) /* R(A) = K(Bu) */\
   _(MOVE,       AB_) /* R(A) = R(B) */\
