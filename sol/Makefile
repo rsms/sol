@@ -4,13 +4,13 @@ include ../Make.common
 cxx_sources :=
 
 c_sources :=    main.c \
-                log.c host.c \
+                log.c host.c msg.c \
                 sched.c task.c func.c \
                 value.c
 
 headers_pub :=  sol.h common.h common_target.h common_stdint.h \
-                debug.h log.h host.h \
-                vm.h sched.h runq.h task.h func.h instr.h \
+                debug.h log.h host.h msg.h \
+                vm.h sched.h runq.h task.h func.h arec.h instr.h \
                 value.h
 
 # --- conf ---------------------------------------------------------------------

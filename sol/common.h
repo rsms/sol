@@ -83,6 +83,7 @@
 
 #define S_NOT_IMPLEMENTED S_FATAL("NOT IMPLEMENTED in %s", __PRETTY_FUNCTION__)
 
+
 #define S_MAX(a,b) \
   ({ __typeof__ (a) _a = (a); \
      __typeof__ (b) _b = (b); \
@@ -92,6 +93,25 @@
   ({ __typeof__ (a) _a = (a); \
      __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
+
+
+// type S_SYNC_SWAP(type *ptr, type value)
+#if defined(__clang__)
+  // This is much more efficient than the below `_s_xchg` fallback.
+  #define S_SYNC_SWAP __sync_swap
+#elif defined(__GNUC__) && (__GNUC__ >= 4)
+  static inline void* _s_xchg(void* volatile* ptr, void* value) {
+    void* oldval;
+    do {
+      oldval = *ptr;
+    } while (__sync_val_compare_and_swap(ptr, oldval, value) != oldval);
+    return oldval;
+  }
+  #define S_SYNC_SWAP(ptr, value) _s_xchg((void* volatile*)(ptr), (void*)(value))
+#else
+  #error "Unsupported compiler: No atomic operations"
+#endif
+
 
 #include <sol/common_stdint.h> // .. include <std{io,int,def,bool}>
 #include <assert.h>
