@@ -15,7 +15,7 @@ typedef struct SARec {
   SInstr*       pc;           // PC
   struct SARec* parent;       // Parent AR
   SValue        registry[10]; // Registry
-} SARec;
+} SARec; // 184 = 24+(16*10)
 
 // Create a new activation record. We inline this since it's only used in two
 // places: Creation of a new task and when  calling a function. In the latter
