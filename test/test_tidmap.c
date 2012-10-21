@@ -4,7 +4,7 @@
 #include "../sol/tidmap.c"
 
 const size_t taskc = 6;
-STask taskv[taskc];
+STask2 taskv[taskc];
 
 bool test_add_get() {
   STIDMap tidmap = S_TID_MAP_INIT;
@@ -18,14 +18,14 @@ bool test_add_get() {
 
   // Get each task added
   for (size_t i = 0; i != taskc; ++i) {
-    STask* t = STIDMapGet(&tidmap, taskv[i].tid);
+    STask2* t = STIDMapGet(&tidmap, taskv[i].tid);
     //printf("get %u => %p (expected %p)\n", taskv[i].tid, t, &taskv[i]);
     assert(t == &taskv[i]);
   }
 
   // Remove each task added
   for (size_t i = 0; i != taskc; ++i) {
-    STask* t = STIDMapRemove(&tidmap, taskv[i].tid);
+    STask2* t = STIDMapRemove(&tidmap, taskv[i].tid);
     //printf("get %u => %p (expected %p)\n", taskv[i].tid, t, &taskv[i]);
     assert(t == &taskv[i]);
   }
@@ -40,7 +40,7 @@ int main() {
   taskv[1].tid = 9174;
   taskv[2].tid = 191939710;
   taskv[3].tid = 0;
-  taskv[4].tid = STaskIDMax;
+  taskv[4].tid = STask2IDMax;
   taskv[5].tid = 201;
 
   if (!test_add_get()) return 1;

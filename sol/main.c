@@ -125,9 +125,9 @@ int main(int argc, const char** argv) {
   SSched* sched = SSchedCreate();
 
   // Schedule several tasks running the same program
-  //SSchedTask(sched, STaskCreate(b_fun, 0));
-  //SSchedTask(sched, STaskCreate(fun1, 0));
-  SSchedTask(sched, STaskCreate(fun2, 0));
+  //SSchedTask(sched, STaskCreate(b_fun, 0, 0));
+  //SSchedTask(sched, STaskCreate(fun1, 0, 0));
+  SSchedTask(sched, STaskCreate(fun2, 0, 0));
   
   SSchedRun(&vm, sched);
 

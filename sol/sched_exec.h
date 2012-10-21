@@ -217,9 +217,10 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
       SVMDLogOpAB();
       assert(RK_B(*pc).type == SValueTFunc);
       SFunc* func = (SFunc*)RK_B(*pc).value.p;
-      STask* t = STaskCreate(func, task);
+      STask* t = STaskCreate(func, task, 0);
       STaskRetain(task);
       _RQPush(sched, t);
+      SLogD("[task %p] spawned new [task %p]", task, t);
       break;
     }
 

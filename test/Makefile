@@ -8,14 +8,17 @@ bin_prefix := $(TESTS_BUILD_PREFIX)
 object_dir = $(TESTS_BUILD_PREFIX)/.objs
 
 # Compiler and linker flags
-c_flags := $(CFLAGS)
+c_flags := $(CFLAGS) -DS_TEST_SUIT_RUNNING=1
 cxx_flags := $(CXXFLAGS)
-ld_flags := $(LDFLAGS)
+ld_flags := $(LDFLAGS) -L"$(LIB_BUILD_PREFIX)"
 xxld_flags := $(XXLDFLAGS)
 
-c_test_sources := $(wildcard test_*.c)
-c_test_objects  = $(patsubst %.c,$(object_dir)/%.o,$(c_test_sources))
-c_test_programs = $(patsubst %.c,$(bin_prefix)/%.ctest,$(c_test_sources))
+# TODO: Make it possible to disable SMP tests, so that we can run there tests on
+#       UP systems.
+c_test_sources  := $(wildcard test_*.c)
+c_test_programs  = $(patsubst %.c,$(bin_prefix)/%.c-up,$(c_test_sources))
+c_test_programs += $(patsubst %.c,$(bin_prefix)/%.c-smp,$(c_test_sources))
+c_test_programs := $(sort $(c_test_programs))
 
 # --- targets ---
 
@@ -28,37 +31,39 @@ test: $(c_test_programs)
 #	@echo c_test_objects = $(c_test_objects)
 #	@echo c_test_programs = $(c_test_programs)
 
--include ${c_test_objects:.o=.d}
+-include ${c_test_sources:.c=.d}
 
-# Link and run C tests
-$(bin_prefix)/%.ctest: $(object_dir)/%.o
-	$(LD) $(ld_flags) -o $@ $^
-	@echo -n Running test: $(patsubst %.ctest,%.c,$(@F)) ... 
+# Link and run tests (UP)
+$(bin_prefix)/%.c-up: $(object_dir)/%.up.o
+	@$(LD) $(ld_flags) -o $@ $^
+	@printf "Running test: %s (UP) ... " $(patsubst %.c-up,%.c,$(@F))
 	@$@
 	@echo PASS
+	@rm -f $@ $(object_dir)/%.up.o
 
-# Link and run C++ tests
-$(bin_prefix)/%.cxxtest: $(object_dir)/%.o
-	$(LD) $(xxld_flags) $(ld_flags) -o $@ $^
-	@echo -n Running test: $(patsubst %.cxxtest,%.cc,$(@F)) ...
+# Link and run tests (SMP)
+$(bin_prefix)/%.c-smp: $(object_dir)/%.smp.o
+	@$(LD) $(ld_flags) -lpthread -o $@ $^
+	@printf "Running test: %s (SMP) ... " $(patsubst %.c-smp,%.c,$(@F))
 	@$@
 	@echo PASS
-
-# C++ source -> object
-$(object_dir)/%.o: %.cc
-	$(CXXC) $(c_flags) $(cxx_flags) -c -o $@ $<
+	@rm -f $@ $(object_dir)/%.smp.o
 
 # C source -> object
-$(object_dir)/%.o: %.c
-	$(CC) $(c_flags) -c -o $@ $<
+$(object_dir)/%.up.o: %.c
+	@$(CC) $(c_flags) -MMD -DS_WITHOUT_SMP=1 -c -o $@ $<
+$(object_dir)/%.smp.o: %.c
+	@$(CC) $(c_flags) -MMD -c -o $@ $<
 
 clean:
 	rm -rf $(object_dir)
 	rm -rf $(bin_prefix)
 
 common_prebuild:
-	@$(MAKE) -C $(SRCROOT)/sol
+	@$(MAKE) DEBUG=1 -C $(SRCROOT) libev
+	@$(MAKE) DEBUG=1 -C $(SRCROOT)/sol
 	@mkdir -p $(bin_prefix)
 	@mkdir -p $(object_dir)
 
-.PHONY: all clean common_prebuild test $(bin_prefix)/%.ctest
+.PHONY: all clean common_prebuild test $(bin_prefix)/%.c.up \
+	      $(bin_prefix)/%.c.mp

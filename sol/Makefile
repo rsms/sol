@@ -8,7 +8,7 @@ c_sources :=    main.c \
                 sched.c task.c func.c \
                 value.c
 
-headers_pub :=  sol.h common.h common_target.h common_stdint.h \
+headers_pub :=  sol.h common.h common_target.h common_stdint.h common_atomic.h \
                 debug.h log.h host.h tidmap.h msg.h \
                 vm.h sched.h runq.h task.h func.h arec.h instr.h \
                 value.h
@@ -39,9 +39,9 @@ headers_pub_export_dirs = $(call FileDirs,$(headers_pub_export))
 main_program = $(BIN_BUILD_PREFIX)/$(project_id)
 
 # Compiler and linker flags
-c_flags := $(CFLAGS)
+c_flags := $(CFLAGS) -MMD
 cxx_flags := $(CXXFLAGS)
-ld_flags := $(LDFLAGS) -L"$(BUILD_PREFIX)"/libev -lev
+ld_flags := $(LDFLAGS) -L"$(LIB_BUILD_PREFIX)" -lev
 xxld_flags := $(XXLDFLAGS)
 
 # --- targets ---------------------------------------------------------------------

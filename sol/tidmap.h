@@ -1,12 +1,21 @@
 // Task ID map
 #ifndef S_TIDMAP_H_
 #define S_TIDMAP_H_
-#include <sol/task.h>
+
+#include <sol/common.h>
+//#include <sol/task.h>
+
+#define STask2IDMax UINT32_MAX
+typedef uint32_t STask2ID;
+
+typedef struct STask2 {
+  STask2ID tid;
+} STask2;
 
 typedef struct {
-  STaskID  size;
-  uint8_t  opaque0;
-  void*    opaque1;
+  STask2ID  size;
+  uint8_t   opaque0;
+  void*     opaque1;
 } STIDMap;
 
 #define S_TID_MAP_INIT (STIDMap){0,0,0}
@@ -15,14 +24,14 @@ typedef struct {
 void STIDMapFree(STIDMap* m);
 
 // Returns false if task is already in the map.
-bool STIDMapAdd(STIDMap* m, STask* t);
+bool STIDMapAdd(STIDMap* m, STask2* t);
 
 // Lookup task for `tid`. Returns 0 if not found.
-STask* STIDMapGet(const STIDMap* m, STaskID tid);
+STask2* STIDMapGet(const STIDMap* m, STask2ID tid);
 
 // Lookup and remove any task mapped to `tid`. Returns the task that was removed
 // or 0 if not found.
-STask* STIDMapRemove(STIDMap* m, STaskID tid);
+STask2* STIDMapRemove(STIDMap* m, STask2ID tid);
 
 
 #endif // S_TIDMAP_H_

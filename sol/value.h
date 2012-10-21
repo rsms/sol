@@ -20,8 +20,8 @@ typedef enum {
 typedef double SNumber;
 
 typedef struct {
-  uint8_t type;
   union { void* p; SNumber n; } value;
+  uint8_t type;
 } SValue;
 
 // Atoms

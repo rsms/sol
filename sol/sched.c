@@ -115,15 +115,13 @@ inline static void S_ALWAYS_INLINE _WQRemove(SSched* s, STask* t) {
   _ListRemove(&s->whead, &s->wtail, t);
 }
 
-// For external use
 void SSchedTask(SSched* s, STask* t) {
-  t->parent = (STask*)&STaskRoot;
   _RQPush(s, t);
 }
 
 typedef struct {
   ev_timer evtimer; // must be head
-  STask* task;
+  STask*   task;
 } STimer;
 
 static void _TimerCallback(EVLoop *evloop, ev_timer *w, int revents) {
@@ -175,41 +173,48 @@ SSchedTimerStart(SSched* s, STask* task, SNumber after_ms, SNumber repeat_ms) {
   return timer;
 }
 
-static inline void S_ALWAYS_INLINE _TimerCancel(SSched* s, STimer* timer) {
+static inline void _TimerCancel(SSched* s, STimer* timer) {
   STrace();
   ev_timer_stop((EVLoop*)s->events_, (ev_timer*)timer);
 }
 
 
-// Cleans up `t`, potentially freeing it. Returns true if there are any live
-// subtasks or if a "zombie" parent has more subtasks. Basically, this returns
-// true if there are more tasks that need to be checked for zombie parents.
+// Called when a task ended. Cleans it up and potentially free's it.
+// Returns true if `t` has subtasks which are still alive.
 inline static bool S_ALWAYS_INLINE
-_TaskPostMortem(STask* t) {
+_EndTask(STask* t, STaskStatus status) {
   STrace();
-  bool has_live_dependants = false;
 
-  if (t->parent != &STaskRoot) {
-    SLogD(">>> has parent");
-    // This is a subtask. Release our reference to our parent task.
-    if (t->parent->next == &STaskZombie) {
-      SLogD(">>> parent is zombie");
-      // Parent is deaaaaaddd but alliiiiiveeee at the same time.
-      // Release our reference to the undead supertask.
-      if (!STaskRelease(t->parent)) {
-        // Darn. We weren't the only live sutask of the undead supertask. Set
-        // `has_live_dependants` to true to flag "there are more tasks to kill".
-        // Remember that `t->parent->refc` is the number of live subtasks, thus
-        // since we are in this branch, that means:
-        // - t->parent is dead
-        // - There are live subtasks of t->parent that need killing
-        has_live_dependants = true;
-      }
+  if (status == STaskStatusError) {
+    SLogE("Task error");
+  }
+
+  if (t->supt != 0) {
+    // This task has a supertask
+    SLogD(">>> subtask with supertask");
+
+    if (t->supt->next == &STaskDead) {
+      // Supertask is dead
+      SLogD(">>> supertask is dead and we might become a zombie");
+
+      // Release our reference to the dead supertask
+      // if (!STaskRelease(t->supt)) {
+      //   // In this case:
+      //   // - Supertask is dead
+      //   // - Supertask has more references (more live subtasks)
+      //   // If we add "zombie collection" to the scheduler, we could set a flag
+      //   // here to speed up a collection as we know there are more zombies.
+      //   SLogD(">>> there are more zombies out there");
+      // }
     } else {
       // The supertask is still alive and well.
-      // TODO: Send a "subtask ended" message to the parent task
-      // Release our reference to the supertask.
-      STaskRelease(t->parent);
+
+      // TODO: Enqueue a "subtask exited" in parent tasks' inbox
+    }
+
+    // Release our reference to the supertask.
+    if (STaskRelease(t->supt)) {
+      SLogD(">>> we caused the final collection of our supertask");
     }
   }
 
@@ -217,85 +222,41 @@ _TaskPostMortem(STask* t) {
   // that needs free'ing except `next` (which is needed for the "zombie" flag).
   // The most important thing is to (optionally first unwind and then) free the
   // AR stack.
-
-  // Release our one "live" reference.
-  if (!STaskRelease(t)) {
-    SLogD(">>> has children");
-    // There are more references to us. Mark ourselves as undead by setting
-    // `next` to `STaskZombie`.
-    // Note: This is safe as tasks are never shared across OS threads.
-    t->next = (STask*)&STaskZombie;
-    t->prev = 0;
-    // Yup, there are some tasks to kill as effect of this (t's subtasks).
-    has_live_dependants = true;
+  if (t->ar) {
+    SARecDestroy(t->ar);
+    t->ar = 0;
   }
 
-  return has_live_dependants;
-}
+  // Release our one "live" reference.
+  if (STaskRelease(t)) {
+    SLogD(">>> task finally collected");
+    return false;
+  } else {
+    SLogD(">>> supertask died before all its subtasks died");
+    // There are more references to us. Mark ourselves as undead by setting
+    // `next` to `STaskDead`.
 
-// Checks all waiting tasks to see if any of them is a zombie (has a supertask
-// which is dead ...but still aaaliiiive!)
-inline static void S_ALWAYS_INLINE
-_CheckZombies(SSched* s, bool* something_died) {
-  STrace();
-  assert(s->whead != 0); // or it makes no sense being here
+    // The following STORE is SMP-safe. However we need to be cautious:
+    //
+    // - `t` is no longer in any RQ or WQ and so `next` not `prev` will be
+    //   accessed by any scheduler. All good.
+    //
+    // - But if a subtask ends at the same time in a different scheduler,
+    //   `_EndTask` will LOAD the value of `next` to compare it against
+    //   `STaskDead`. Since we do allow zombies, this race condition can be
+    //   ignored.
+    //
+    // So instead of CAS-ing around the LOAD, which happens _every time_ a task
+    // ends which has, or did have, a supertask (basically all tasks). But this
+    // case of a supertask dying before all of its subtasks happens more rarely.
+    // The `next` value is marked "volatile" and so LOADs should be ordered. We
+    // don't need care about CAS here when STORE-ing, since the only value ever
+    // stored is this one value. If we ever store anything else into `next`
+    // after the task has ended, we will need SAtomicSwap here.
+    t->next = (STask*)&STaskDead;
 
-  // Clear the `something_died` flag
-  *something_died = false;
-
-  // For each task in WQ...
-  STask* t = s->whead;
-
-  while (t != 0) {
-    if (t->parent->next == &STaskZombie) {
-      // Woops. Parent task has died. Kill this subtask.
-      SLogD("[ZL] parent died -- letting waiting subtask die too");
-
-      // Cancel whatever events `t` is waiting for, or else events will trigger
-      // after `t` has died, which will crash all the things.
-      assert(t->wp != 0);
-      assert(t->wtype == STaskWaitTimer); // only one type at the moment
-      _TimerCancel(s, (STimer*)t->wp);
-
-      // Remove task from WQ
-      _DumpRQAndWQ(s);
-      _WQRemove(s, t);
-
-      // Clean up
-      if (_TaskPostMortem(t)) {
-        // Set the `something_died` flag to true. This will cause another
-        // visitation to this subroutine, avoiding the case of leaving orphans
-        // in the waiting queue.
-        *something_died = true;
-        // Discussion:
-        //
-        //  A spawns B
-        //  B spawns C
-        //  C waits for a message from B, so it's put in the waiting queue
-        //  B waits for a message from A, so it's put in the waiting queue
-        //  A dies and the run queue loop sets `something_died` to true.
-        //
-        //   When the run queue ends one cycle, it sees that something died
-        //   and invokes the `_CheckZombies` subroutine. `_CheckZombies` finds
-        //   that B is a zombie (since it's parent A has died) and so it kills
-        //   B.
-        //
-        //   Now, imagine if we didn't set `something_died` to true here, then
-        //   when we exit back to the run queue we might never again call
-        //   `_CheckZombies` (in the case no more tasks die).
-        //
-        //   So when we set this flag to true here, a full run queue cycle
-        //   will happen after we return, but after that `_CheckZombies` is
-        //   invoked again, which will find that C is a zombie (since it's
-        //   parent B has died).
-        //
-      }
-    }
-
-    // Advance to next task in WQ
-    t = t->next;
-
-  } // while: for each task in WQ
+    return true;
+  }
 }
 
 // For the sake of readability and structure, the `SSchedExec` function is
@@ -304,9 +265,6 @@ _CheckZombies(SSched* s, bool* something_died) {
 
 void SSchedRun(SVM* vm, SSched* s) {
   STask* t;
-
-  // Death flag. Keeps track of if any tasks dies in one run queue cycle
-  bool something_died = false;
 
   EVLoop* evloop = (EVLoop*)s->events_;
   int* evrefs = ev_refcount(evloop);
@@ -325,18 +283,10 @@ void SSchedRun(SVM* vm, SSched* s) {
     );// [vm] 0x7fd431c03930 1          [10] LT      ABC:   0, 255,   0
     #endif
 
-    STaskStatus status;
+    // Execute the task
+    STaskStatus status = SSchedExec(vm, s, t);
 
-    if (something_died && t->parent->next == &STaskZombie) {
-      // Woops. Parent task has died. Let this task die too.
-      SLogD("[RL] parent died -- letting running subtask die too.");
-      status = STaskStatusEnd;
-    } else {
-      // Execute the task
-      status = SSchedExec(vm, s, t);
-    }
-
-    // TODO: Clean this up
+    // TODO: Clean this up with a switch
     if (status == STaskStatusError ||
         status == STaskStatusEnd ||
         status == STaskStatusSuspend) {
@@ -351,21 +301,8 @@ void SSchedRun(SVM* vm, SSched* s) {
         // Add task to waiting queue
         _WQPush(s, t);
       } else {
-        // Task died (naturally or from an error)
-        if (status == STaskStatusError) {
-          SLogE("Task error");
-        }
-        SLogD(">>>>>>>>");
-        // Clean up the task. Returns true if the task has live subtasks.
-        if (_TaskPostMortem(t)) {
-          // There are more references than one, which means this task has
-          // subtasks and we must mark `something_died` so that we can--after
-          // this run queue cycle completes--check for zombies in the waiting
-          // queue.
-          SLogD("[RL] a supertask died before its subtasks."
-                " Set something_died = true");
-          something_died = true;
-        }
+        // Task ended
+        _EndTask(t, status);
       }
       
       // Advance to the next task
@@ -373,9 +310,14 @@ void SSchedRun(SVM* vm, SSched* s) {
 
     } else {
       assert(status == STaskStatusYield);
-      // Keep task in run queue
+      // Keep task in run queue.
+      // Advance to the next task
       t = t->next;
     }
+
+    // `t` could be the special `STaskDead` value if we made a programming error
+    // and assigned `STaskDead` to a task that was still in the RQ or WQ.
+    assert(t != &STaskDead);
 
     if (t == 0) {
       // We reached the end of one run queue cycle.
@@ -383,33 +325,17 @@ void SSchedRun(SVM* vm, SSched* s) {
 
       // Wrap around the run queue
       t = s->rhead;
+    }
 
-      if (something_died) {
-        // At least one task died this cycle and...
-        if (s->whead != 0) {
-          // ...there are waiting tasks (which are not in the run queue,
-          // naturally), so lets check for zombies among tasks in the waiting
-          // queue.
-
-          // `_CheckZombies` will kill any waiting tasks which parent task has
-          // died. It will set `something_died` depending on if more checks are
-          // needed (i.e. to inspect tasks in the run queue).
-          _CheckZombies(s, &something_died);
-        } else {
-          // Well, 
-          something_died = false;
-        }
-      }
-    } else if (*evrefs > 0) {
-      // Handle any immediate events that triggered event watchers.
-      // Conditional: Only if there are evrefs
+    if (t != 0 && *evrefs > 0) {
+      // Handle any immediate events that triggered event watchers
       SLogD("[RL] ev_run(NOWAIT) (%d refs)", *evrefs);
       ev_run(evloop, EVRUN_NOWAIT);
     }
 
   } // while there are queued tasks
 
-  // While there are active event watchers
+  // While there are active event watchers:
   if (*evrefs > 0) {
     SLogD("[EL] ev_run(WAIT) (%d refs)", *evrefs);
     ev_run(evloop, 0);

@@ -1,5 +1,6 @@
 include Make.common
-all: sol test
+all: test
+
 clean:
 	@$(MAKE) -C $(SRCROOT)/sol $@
 	@$(MAKE) -C $(SRCROOT)/test $@
@@ -11,8 +12,8 @@ sol: libev
 
 libev:
 	@$(MAKE) -C $(SRCROOT)/deps/libev
-	@mkdir -p "$(BUILD_PREFIX)/libev"
-	ln -fs "$(SRCROOT)/deps/libev/.libs/libev.a" "$(BUILD_PREFIX)/libev"
+	@mkdir -p "$(LIB_BUILD_PREFIX)"
+	@ln -fs "$(SRCROOT)/deps/libev/.libs/libev.a" "$(LIB_BUILD_PREFIX)"
 
 test:
 	@$(MAKE) -C $(SRCROOT)/test $@

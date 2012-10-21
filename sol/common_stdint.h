@@ -1,4 +1,4 @@
-#ifndef S_COMMON_H_INSIDE_
+#ifndef S_INTERNAL_
 #error "This file should not be included directly"
 #endif
 

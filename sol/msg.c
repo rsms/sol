@@ -6,10 +6,13 @@
 //   q->sentinel.next = 0;
 // }
 
-void SMsgEnqueue(SMsgQ* q, SMsg* m) {
+// Based on https://groups.google.com/d/msg/lock-free/Vd9xuHrLggE/B9-URa3B37MJ
+
+bool SMsgEnqueue(SMsgQ* q, SMsg* m) {
   m->next = 0;
-  SMsg* prev = S_SYNC_SWAP(&q->head, m);
+  SMsg* prev = SAtomicSwap(&q->head, m);
   prev->next = m;
+  return prev == &q->sentinel;
 }
 
 SMsg* SMsgDequeue(SMsgQ* q) {

@@ -34,7 +34,7 @@ AR = ar
 UpperCase = $(shell echo $(1) | tr a-z A-Z)
 
 # Compiler and Linker flags for all targets
-CFLAGS   += -Wall -g -std=c99 -MMD -I$(INCLUDE_BUILD_PREFIX) \
+CFLAGS   += -Wall -g -std=c99 -I$(INCLUDE_BUILD_PREFIX) \
             -arch $(TARGET_ARCH)
 CXXFLAGS += -std=c++11 -fno-rtti
 LDFLAGS  += -arch $(TARGET_ARCH)

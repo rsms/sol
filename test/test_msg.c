@@ -1,4 +1,6 @@
 // Tests the message queue, which is a lock-free MP,SC FIFO queue.
+#include "test.h"
+#include "bench.h"
 #include <sol/common.h>
 #include <sol/host.h> // for SHostAvailCPUCount
 #include <sol/msg.h>
@@ -8,10 +10,15 @@
 // TODO: Disable this test if the system does not have pthreads
 #include <pthread.h>
 
-//#define print(fmt, ...) printf(fmt "\n", ##__VA_ARGS__)
-#define print(...) ((void)0)
+#if S_TEST_SUIT_RUNNING
 #define VALUE_COUNT  10000
+#else
+#define VALUE_COUNT  10000
+//#define VALUE_COUNT  10000000
+#endif
+
 size_t thread_count = 3;
+uint32_t total_count = 0;
 
 typedef struct Thread {
   uint32_t  tid;
@@ -38,14 +45,18 @@ void* thread_main(void* d) {
     expected_sum *= (SNumber)(thread_count-1);
 
     count = total_value_count;
+    size_t failures = 0;
 
     do {
       SMsg* n = SMsgDequeue(t->q);
       if (n) {
+        failures = 0;
         --count;
         sum += n->value.value.n;
         //print("  [consumer] recv %u", n->value);
         free(n);
+      } else if (++failures == 100000) {
+        SAssert(!"Too many consecutive 'dequeue' errors");
       }
     } while (count);
     print("  [consumer] received all %u values (sum: " SNumberFormat ")",
@@ -65,7 +76,11 @@ void* thread_main(void* d) {
     print("[producer %u] exiting", t->tid);
   }
 
+#if !S_WITHOUT_SMP
   pthread_exit(0);
+#endif
+
+  return 0;
 }
 
 bool spawn_thread(Thread* t) {
@@ -80,14 +95,23 @@ bool spawn_thread(Thread* t) {
 int main() {
   // Use a minimum of <thread_count> OS threads
   thread_count = S_MAX(thread_count, SHostAvailCPUCount());
-  print("thread_count: %zu", thread_count);
-  
-  Thread* threads = (Thread*)malloc(sizeof(Thread) * thread_count);
+  total_count = (thread_count-1) * VALUE_COUNT;
+  SMsgQ q = S_MSGQ_INIT(q);
+  SResUsage rstart;
 
-  SMsgQ q;// = S_MSGQ_INIT(q);
-  q.head = &q.sentinel;
-  q.tail = &q.sentinel;
-  q.sentinel.next = 0;
+#if S_WITHOUT_SMP
+  thread_count = 2; // or our sum and count calculations will be off
+  total_count = VALUE_COUNT;
+  Thread producer = {0,0,&q};
+  Thread consumer = {1,0,&q};
+  SAssertTrue(SResUsageSample(&rstart));
+  thread_main((void*)&producer);
+  thread_main((void*)&consumer);
+
+#else // S_WITHOUT_SMP
+  print("thread_count: %zu", thread_count);
+  Thread* threads = (Thread*)malloc(sizeof(Thread) * thread_count);
+  SAssertTrue(SResUsageSample(&rstart));
 
   size_t i = 0;
   for (; i != thread_count; ++i) {
@@ -104,6 +128,16 @@ int main() {
       perror("pthread_join");
     }
   }
+#endif // S_WITHOUT_SMP
+
+  SAssertNil(SMsgDequeue(&q));
+
+  // Sample #2 and print stats
+  #if !S_TEST_SUIT_RUNNING
+  SResUsage rend;
+  SAssertTrue(SResUsageSample(&rend));
+  SResUsagePrintSummary(&rstart, &rend, "send+recv", total_count, thread_count);
+  #endif
 
   pthread_exit(NULL);
   return 0;

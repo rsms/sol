@@ -1,4 +1,6 @@
-#ifndef S_COMMON_H_INSIDE_
+#ifndef S_COMMON_TARGET_H_
+#define S_COMMON_TARGET_H_
+#ifndef S_INTERNAL_
 #error "This file should not be included directly"
 #endif
 
@@ -82,3 +84,5 @@
   #define S_TARGET_OS_UNKNOWN 1
 #endif
 //-- end S_TARGET_OS_*
+
+#endif // S_COMMON_TARGET_H_

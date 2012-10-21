@@ -1,10 +1,10 @@
 #include "tidmap.h"
 
-#define HASMAP_SIZE_T STaskID
-#include "_hashmap.h"
+#define HASMAP_SIZE_T STask2ID
+#include "hashmap.h"
 
 typedef struct _Entry {
-  STaskID tid;
+  STask2ID tid;
 } _Entry;
 
 // The following is based of off what DEFINE_HASHMAP(_Map, _Entry*) generates:
@@ -45,12 +45,12 @@ void STIDMapFree(STIDMap* m) {
 }
 
 // Returns false if task is already in the map
-bool STIDMapAdd(STIDMap* m, STask* t) {
+bool STIDMapAdd(STIDMap* m, STask2* t) {
   //printf("..put %u at %p\n", t->tid, t);
   _Entry** p = (_Entry**)&t;
   #if S_DEBUG
   if (_MapPut((_Map*)m, &p, HMDR_FAIL) == HMPR_FAILED) {
-    assert((STask*)*p == t); // or we have two live tasks with the same TID
+    assert((STask2*)*p == t); // or we have two live tasks with the same TID
     return false;
   } else {
     return true;
@@ -60,22 +60,22 @@ bool STIDMapAdd(STIDMap* m, STask* t) {
   #endif
 }
 
-STask* STIDMapGet(const STIDMap* m, STaskID tid) {
+STask2* STIDMapGet(const STIDMap* m, STask2ID tid) {
   _Entry* p = (_Entry*)&tid;
   _Entry** pp = &p;
   if (_MapFind((const _Map*)m, &pp)) {
     //printf("..found %u at %p\n", tid, *pp);
-    return (STask*)*pp;
+    return (STask2*)*pp;
   } else {
     return 0;
   }
 }
 
-STask* STIDMapRemove(STIDMap* m, STaskID tid){
+STask2* STIDMapRemove(STIDMap* m, STask2ID tid){
   _Entry* p = (_Entry*)&tid;
   if (_MapRemove((_Map*)m, &p)) {
     //printf("..removed %u at %p\n", tid, p);
-    return (STask*)p;
+    return (STask2*)p;
   } else {
     return 0;
   }

@@ -1,6 +1,6 @@
 #ifndef S_COMMON_H_
 #define S_COMMON_H_
-#define S_COMMON_H_INSIDE_
+#define S_INTERNAL_
 
 #define S_STR1(str) #str
 #define S_STR(str) S_STR1(str)
@@ -14,6 +14,8 @@
 #ifndef S_DEBUG
   #define S_DEBUG 0
 #endif
+// Disable multiprocessing?
+//#define S_WITHOUT_MP 0
 
 #include <sol/common_target.h>
 
@@ -23,7 +25,26 @@
   #define S_FILENAME ((strrchr(__FILE__, '/') ?: __FILE__ - 1) + 1)
 #endif
 
-#define S_countof(a) (sizeof(a)/sizeof(*(a)))
+#define s_countof(a) (sizeof(a)/sizeof(*(a)))
+
+// Assertion macros
+#if !NDEBUG
+  #define SAssert(x) assert(x)
+  // Important: The following macros _always_ evaluate `x`, even when compiling
+  // w/ assertions disabled. The purpose is to allow wrapping like so:
+  //    SAssertNil(somelibcfunc(dostuff))
+  //
+  #define SAssertTrue(x) SAssert((x) == true)
+  #define SAssertFalse(x) SAssert((x) == false)
+  #define SAssertNil(x) SAssert((x) == 0)
+  #define SAssertNotNil(x) SAssert((x) != 0)
+#else
+  #define SAssert(x) ((void)0)
+  #define SAssertTrue(x) (x)
+  #define SAssertFalse(x) (x)
+  #define SAssertNil(x) (x)
+  #define SAssertNotNil(x) (x)
+#endif
 
 // Terminate process with status 70 (EX_SOFTWARE), writing `fmt` with optional
 // arguments to stderr.
@@ -51,7 +72,9 @@
 #else
   #define S_ALWAYS_INLINE
 #endif
-#if __has_attribute(deprecated)
+#if __has_attribute(unused)
+  // Attached to a function, means that the function is meant to be possibly
+  // unused. The compiler will not produce a warning for this function.
   #define S_UNUSED __attribute__((unused))
 #else
   #define S_UNUSED
@@ -71,6 +94,13 @@
 #else
   #define S_PACKED
 #endif
+#if __has_attribute(aligned)
+  #define S_ALIGNED(bytes) __attribute__((aligned (bytes)))
+#else
+  #warning "No align attribute available. Things might break"
+  #define S_ALIGNED
+#endif
+
 #if __has_builtin(__builtin_unreachable)
   #define S_UNREACHABLE do { \
     assert(!"Declared S_UNREACHABLE but was reached"); \
@@ -94,28 +124,10 @@
      __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-
-// type S_SYNC_SWAP(type *ptr, type value)
-#if defined(__clang__)
-  // This is much more efficient than the below `_s_xchg` fallback.
-  #define S_SYNC_SWAP __sync_swap
-#elif defined(__GNUC__) && (__GNUC__ >= 4)
-  static inline void* _s_xchg(void* volatile* ptr, void* value) {
-    void* oldval;
-    do {
-      oldval = *ptr;
-    } while (__sync_val_compare_and_swap(ptr, oldval, value) != oldval);
-    return oldval;
-  }
-  #define S_SYNC_SWAP(ptr, value) _s_xchg((void* volatile*)(ptr), (void*)(value))
-#else
-  #error "Unsupported compiler: No atomic operations"
-#endif
-
-
 #include <sol/common_stdint.h> // .. include <std{io,int,def,bool}>
 #include <assert.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <errno.h>
 #include <string.h>
 #include <err.h>
@@ -124,5 +136,7 @@
   #include <unistd.h>
 #endif
 
-#undef S_COMMON_H_INSIDE_
+#include <sol/common_atomic.h>
+
+#undef S_INTERNAL_
 #endif // S_COMMON_H_
