@@ -38,4 +38,10 @@ void SSchedTask(SSched* s, STask* t);
 // Run the scheduler. This function exits when the run queue is empty.
 void SSchedRun(SVM* vm, SSched* s);
 
+#if S_DEBUG
+// Execute the next set of instructions in task. This function returns as soon
+// as the task ends or yields in any way. Purpose is unit tests.
+STaskStatus SchedExec(SVM* vm, SSched* sched, STask *task);
+#endif
+
 #endif // S_SCHED_H_

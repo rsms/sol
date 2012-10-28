@@ -1,0 +1,42 @@
+sub = function x y:
+  return x - y
+
+subs = function len:
+  each x in 0..len:
+    y = if (x == 2) then 10 else 1
+    sub(x y)
+
+subs 5 -> [-1, 0, -8, 2, 3]
+
+subs:
+  # Generator that starts at 0 and ends at len in increments of 1
+  ngen = 0..len
+  # Application function
+  f0 = function x:
+    if x == 2
+      y = 10
+    else
+      y = 1
+    sub(x y)
+  # Map f0 to ngen
+  mapper ngen f0
+
+# VM instructions
+function sub     # args: (x=R(0), y=R(1))
+  SUB 0 0 1      # R(0) = R(0) - R(1)
+  RETURN 0 1     # <- R(0)...R(0+1-1) = R(0)..R(0) = R(0)
+function subs/f0 # args: (x=R(0)), k: (2,10,1,"sub")
+  EQ 0 0 256     # (0 == R(0) == K(0)) ? cont else PC++
+  JUMP 2         # PC += 2
+  LOADK 2 1      # R(1) = K(1) = 10
+  JUMP 1         # PC += 1
+  LOADK 2 2      # R(1) = K(2) = 1
+  MOVE 1 0       # R(1) = R(0)
+  GETGLOBAL 0 3  # R(0) = G[K(3)] = G["sub"] = <fun sub>
+  CALL 0 2 1     # R(0)(R(1), R(2)) = sub(x y)
+  RETURN 0 1     # <- R(0)..R(0+1-1) = R(0)..R(0) = R(0)
+function subs    # args: (len=R(0)), k: (0,<fun subs/f0>)
+  MKIGEN 0 256 0 # R(0) = mkigen(K(0), R(0)) = mkigen(0, len)
+  MAP 0 0 257    # R(0) = MAP(R(0), K(1)) = MAP(ngen, <fun subs/f0>)
+  RETURN 0 1     # <- R(0)..R(0+1-1) = R(0)..R(0) = R(0)
+

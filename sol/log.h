@@ -2,9 +2,7 @@
 #define S_LOG_H_
 #include <sol/common.h>
 
-#ifndef S_LOG_STREAM
-#define S_LOG_STREAM stderr
-#endif
+FILE* SLogStream;
 
 //
 // void SLog(const char* format, ...)  -- log a message

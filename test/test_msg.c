@@ -4,8 +4,6 @@
 #include <sol/common.h>
 #include <sol/host.h> // for SHostAvailCPUCount
 #include <sol/msg.h>
-#include "../sol/host.c"
-#include "../sol/msg.c"
 
 // TODO: Disable this test if the system does not have pthreads
 #include <pthread.h>

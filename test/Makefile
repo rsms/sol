@@ -8,7 +8,7 @@ bin_prefix := $(TESTS_BUILD_PREFIX)
 object_dir = $(TESTS_BUILD_PREFIX)/.objs
 
 # Compiler and linker flags
-c_flags := $(CFLAGS) -DS_TEST_SUIT_RUNNING=1
+c_flags := $(CFLAGS) -I.. -DS_TEST_SUIT_RUNNING=1
 cxx_flags := $(CXXFLAGS)
 ld_flags := $(LDFLAGS) -L"$(LIB_BUILD_PREFIX)"
 xxld_flags := $(XXLDFLAGS)
@@ -24,7 +24,7 @@ c_test_programs := $(sort $(c_test_programs))
 
 all: test
 
-test: common_prebuild
+test: common_pre
 test: $(c_test_programs)
 #test:
 #	@echo c_test_sources = $(c_test_sources)
@@ -33,37 +33,36 @@ test: $(c_test_programs)
 
 -include ${c_test_sources:.c=.d}
 
+clean:
+	rm -rf $(object_dir)
+	rm -rf $(bin_prefix)
+
+common_pre:
+	@$(MAKE) -C $(SRCROOT)/sol DEBUG=1 sol
+	@mkdir -p $(bin_prefix)
+	@mkdir -p $(object_dir)
+
 # Link and run tests (UP)
 $(bin_prefix)/%.c-up: $(object_dir)/%.up.o
-	@$(LD) $(ld_flags) -o $@ $^
+	$(LD) $(ld_flags) -lev -lsol -o $@ $^
 	@printf "Running test: %s (UP) ... " $(patsubst %.c-up,%.c,$(@F))
-	@$@
+	@$@ >/dev/null
 	@echo PASS
 	@rm -f $@ $(object_dir)/%.up.o
 
 # Link and run tests (SMP)
 $(bin_prefix)/%.c-smp: $(object_dir)/%.smp.o
-	@$(LD) $(ld_flags) -lpthread -o $@ $^
+	$(LD) $(ld_flags) -lev -lsol -lpthread -o $@ $^
 	@printf "Running test: %s (SMP) ... " $(patsubst %.c-smp,%.c,$(@F))
-	@$@
+	@$@ >/dev/null
 	@echo PASS
 	@rm -f $@ $(object_dir)/%.smp.o
 
 # C source -> object
 $(object_dir)/%.up.o: %.c
-	@$(CC) $(c_flags) -MMD -DS_WITHOUT_SMP=1 -c -o $@ $<
+	$(CC) $(c_flags) -MMD -DS_WITHOUT_SMP=1 -c -o $@ $<
 $(object_dir)/%.smp.o: %.c
-	@$(CC) $(c_flags) -MMD -c -o $@ $<
+	$(CC) $(c_flags) -MMD -c -o $@ $<
 
-clean:
-	rm -rf $(object_dir)
-	rm -rf $(bin_prefix)
-
-common_prebuild:
-	@$(MAKE) DEBUG=1 -C $(SRCROOT) libev
-	@$(MAKE) DEBUG=1 -C $(SRCROOT)/sol
-	@mkdir -p $(bin_prefix)
-	@mkdir -p $(object_dir)
-
-.PHONY: all clean common_prebuild test $(bin_prefix)/%.c.up \
-	      $(bin_prefix)/%.c.mp
+.PHONY: all clean common_pre test $(bin_prefix)/%.c.up \
+	      $(bin_prefix)/%.c.mp test_%.c

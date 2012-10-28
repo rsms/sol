@@ -50,25 +50,28 @@ typedef uint32_t SInstr;
 // There is room for 64 operations and 256 registers (OP=6 bits, A=8 bits)
 //
 #define S_INSTR_DEFINE(_) \
+  /* Data */ \
+  _(LOADK,      ABu) /* R(A) = K(Bu) */\
+  _(MOVE,       AB_) /* R(A) = R(B) */\
   /* Control flow */ \
   _(YIELD,      ABC) /* suspend and reschedule */\
   _(JUMP,       Bss) /* PC += Bss */\
   _(CALL,       ABC) /* R(A), ... ,R(A+C-1) := R(A)(R(A+1), ... ,R(A+B)) */\
   _(RETURN,     AB_) /* return R(A), ... ,R(A+B-1) */\
   _(SPAWN,      AB_) /* R(A) = spawn(RK(B)) */\
-  /* Data */ \
-  _(LOADK,      ABu) /* R(A) = K(Bu) */\
-  _(MOVE,       AB_) /* R(A) = R(B) */\
-  _(DBGREG,     ABC) /* special: Debug dump register values */\
   /* Arithmetic */ \
   _(ADD,        ABC) /* R(A) = RK(B) + RK(C) */\
   _(SUB,        ABC) /* R(A) = RK(B) - RK(C) */\
   _(MUL,        ABC) /* R(A) = RK(B) * RK(C) */\
   _(DIV,        ABC) /* R(A) = RK(B) / RK(C) */\
+  /* Logic tests */ \
   _(NOT,        AB_) /* R(A) = not R(B) */\
   _(EQ,         ABC) /* if (A == RK(B) == RK(C)) JUMP else PC++ */\
   _(LT,         ABC) /* if (A == RK(B) < RK(C)) JUMP else PC++ */\
-  _(LE,         ABC) /* if (A == RK(B) <= RK(C)) JUMP else PC++ */
+  _(LE,         ABC) /* if (A == RK(B) <= RK(C)) JUMP else PC++ */\
+  /* Debugging. TODO: Find a way to turn these off when !S_DEBUG */ \
+  _(DBGREG,     ABC) /* Dump register values */\
+  _(DBGCB,      ABC) /* Call C function at K(B) */\
   
 
 // Macros for accessing instruction field values

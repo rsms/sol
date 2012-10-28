@@ -1,6 +1,7 @@
 #include "sched.h"
 #include "instr.h"
 #include "log.h"
+#include "debug.h"
 #include "../deps/libev/ev.h"
 
 typedef struct ev_loop EVLoop;
@@ -9,7 +10,7 @@ typedef struct ev_loop EVLoop;
 void _DumpQ(STask* t) {
   size_t count = 0;
   while (t != 0) {
-    printf(
+    fprintf(SLogStream,
       "%s[task %p]%s",
       (count++ % 4 == 0) ? "\n  " : "",
       t,
@@ -19,11 +20,11 @@ void _DumpQ(STask* t) {
   }
 }
 void _DumpRQAndWQ(SSched* s) {
-  printf("[sched %p] run queue:", s);
+  fprintf(SLogStream, "[sched %p] run queue:", s);
   _DumpQ(s->rhead);
-  printf("\n[sched %p] wait queue:", s);
+  fprintf(SLogStream, "\n[sched %p] wait queue:", s);
   _DumpQ(s->whead);
-  printf("\n");
+  fprintf(SLogStream, "\n");
 }
 #else
 #define _DumpRQAndWQ(x) ((void)0)
@@ -125,6 +126,7 @@ typedef struct {
 } STimer;
 
 static void _TimerCallback(EVLoop *evloop, ev_timer *w, int revents) {
+  STrace();
   SSched* s = (SSched*)ev_userdata(evloop);
   STimer* timer = (STimer*)w;
   _DumpRQAndWQ(s);
@@ -140,6 +142,10 @@ static void _TimerCallback(EVLoop *evloop, ev_timer *w, int revents) {
   // priority level. Right now, we are always scheduling the task at the end of
   // the RQ. This means that events are processed in the order they arrive in.
 
+  // Mark the task as no longer waiting for anything
+  timer->task->wp = 0;
+
+  // Free the timer
   free(timer); // FIXME
 
   // If the scheduler is in the waiting loop, break the ev loop
@@ -151,7 +157,8 @@ static void _TimerCallback(EVLoop *evloop, ev_timer *w, int revents) {
 
 // Start a timer
 static inline STimer*
-SSchedTimerStart(SSched* s, STask* task, SNumber after_ms, SNumber repeat_ms) {
+_TimerStart(SSched* s, STask* task, SNumber after_ms, SNumber repeat_ms) {
+  STrace();
   STimer* timer = (STimer*)malloc(sizeof(STimer)); // FIXME: malloc
   timer->task = task;
   
@@ -175,6 +182,10 @@ SSchedTimerStart(SSched* s, STask* task, SNumber after_ms, SNumber repeat_ms) {
 
 static inline void _TimerCancel(SSched* s, STimer* timer) {
   STrace();
+  assert(timer->task != 0);
+  assert(timer->task->wtype == STaskWaitTimer);
+  assert(timer->task->wp == timer);
+  timer->task->wp = 0;
   ev_timer_stop((EVLoop*)s->events_, (ev_timer*)timer);
 }
 
@@ -182,7 +193,7 @@ static inline void _TimerCancel(SSched* s, STimer* timer) {
 // Called when a task ended. Cleans it up and potentially free's it.
 // Returns true if `t` has subtasks which are still alive.
 inline static bool S_ALWAYS_INLINE
-_EndTask(STask* t, STaskStatus status) {
+_EndTask(SSched* s, STask* t, STaskStatus status) {
   STrace();
 
   if (status == STaskStatusError) {
@@ -227,6 +238,13 @@ _EndTask(STask* t, STaskStatus status) {
     t->ar = 0;
   }
 
+  // Cancel anything that the task is waiting for
+  if (t->wp) {
+    if (t->wtype == STaskWaitTimer) {
+      _TimerCancel(s, t->wp);
+    }
+  }
+
   // Release our one "live" reference.
   if (STaskRelease(t)) {
     SLogD(">>> task finally collected");
@@ -259,9 +277,16 @@ _EndTask(STask* t, STaskStatus status) {
   }
 }
 
-// For the sake of readability and structure, the `SSchedExec` function is
+// For the sake of readability and structure, the `_SchedExec` function is
 // defined in a separate file
 #include "sched_exec.h"
+
+// Expose externally, meant for unit tests
+#if S_DEBUG
+STaskStatus SchedExec(SVM* vm, SSched* s, STask *t) {
+  return _SchedExec(vm, s, t);
+}
+#endif
 
 void SSchedRun(SVM* vm, SSched* s) {
   STask* t;
@@ -277,14 +302,14 @@ void SSchedRun(SVM* vm, SSched* s) {
 
     // If vm instructions are being logged, write a header
     #if S_VM_DEBUG_LOG
-    printf(
+    SLog(
         "[vm] ______________ ______________ __________ _______ ____ ______________\n"
-        "[vm] Task           Function       PC         Op      Values\n"
+        "[vm] Task           Function       PC         Op      Values"
     );// [vm] 0x7fd431c03930 1          [10] LT      ABC:   0, 255,   0
     #endif
 
     // Execute the task
-    STaskStatus status = SSchedExec(vm, s, t);
+    STaskStatus status = _SchedExec(vm, s, t);
 
     // TODO: Clean this up with a switch
     if (status == STaskStatusError ||
@@ -302,7 +327,7 @@ void SSchedRun(SVM* vm, SSched* s) {
         _WQPush(s, t);
       } else {
         // Task ended
-        _EndTask(t, status);
+        _EndTask(s, t, status);
       }
       
       // Advance to the next task

@@ -13,7 +13,7 @@
 
 // Toggle to enable debug logging (activates `SVMDLog` macros.)
 #ifndef S_VM_DEBUG_LOG
-#define S_VM_DEBUG_LOG S_DEBUG
+  #define S_VM_DEBUG_LOG S_DEBUG
 #endif
 
 // Execution limit -- limits the number of instructions that can be executed by
@@ -47,7 +47,7 @@ RK_(uint32_t index, SValue* constants, SValue* registry) {
 }
 
 inline static STaskStatus S_ALWAYS_INLINE
-SSchedExec(SVM* vm, SSched* sched, STask *task) {
+_SchedExec(SVM* vm, SSched* sched, STask *task) {
 
   // Get current activation record and set `pc` to the PC of that AR
   SARec *ar = task->ar;
@@ -82,6 +82,25 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
   while (1) {
     switch (SInstrGetOP(*++pc)) {
 
+    // -------------------------------------------------------------------------
+    // Start: Data
+
+    case S_OP_LOADK: {  // R(A) = K(Bu)
+      SVMDLogOpABu();
+      R_A(*pc) = K_Bu(*pc);
+      break;
+    }
+
+    case S_OP_MOVE: {  // R(A) = R(B)
+      SVMDLogOpAB();
+      R_A(*pc) = R_B(*pc);
+      break;
+    }
+
+    // End: Data
+    // -------------------------------------------------------------------------
+    // Start: Control flow
+
     case S_OP_YIELD: {
       // YIELD A=<type> ...
       // YIELD A=0 -- Yield for other tasks (reschedule)
@@ -93,11 +112,12 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
         return STaskStatusYield;
       }
       case 1: {
-        // TODO The task is waiting for a timeout. The task wants to be resumed
-        // after RK(B) = after_ms elapsed.
+        // The task is waiting for a timeout. The task wants to be resumed after
+        // RK(B) = after_ms elapsed.
+        SVMDLogInstrRKVal(B, *pc);
         assert(RK_B(*pc).type == SValueTNumber);
         SNumber after_ms = RK_B(*pc).value.n;
-        SSchedTimerStart(sched, task, after_ms, (SNumber)0);
+        _TimerStart(sched, task, after_ms, (SNumber)0);
 
         return STaskStatusSuspend;
       }
@@ -224,63 +244,64 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
       break;
     }
 
-    case S_OP_LOADK: {  // R(A) = K(Bu)
-      SVMDLogOpABu();
-      R_A(*pc) = K_Bu(*pc);
-      break;
-    }
-
-    case S_OP_MOVE: {  // R(A) = R(B)
-      SVMDLogOpAB();
-      R_A(*pc) = R_B(*pc);
-      break;
-    }
-
-    case S_OP_DBGREG: { // special debug: dump ABC register values
-      SVMDLogOp();
-      SVMDLogInstrRVal(A, *pc);
-      SVMDLogInstrRVal(B, *pc);
-      SVMDLogInstrRVal(C, *pc);
-      break;
-    }
+    // End: Control flow
+    // -------------------------------------------------------------------------
+    // Start: Arithmetic
 
     case S_OP_ADD: { // R(A) = RK(B) + RK(C)
       SVMDLogOpABC();
+      assert(RK_B(*pc).type == SValueTNumber);
+      assert(RK_C(*pc).type == SValueTNumber);
+      R_A(*pc).type = SValueTNumber;
       R_A(*pc).value.n = RK_B(*pc).value.n + RK_C(*pc).value.n;
       break;
     }
 
     case S_OP_SUB: { // R(A) = RK(B) - RK(C)
       SVMDLogOpABC();
-      // SVMDLogInstrRKVal(B, *pc);
-      // SVMDLogInstrRKVal(C, *pc);
-      // SVMDLogInstrRVal(A, *pc);
+      assert(RK_B(*pc).type == SValueTNumber);
+      assert(RK_C(*pc).type == SValueTNumber);
+      R_A(*pc).type = SValueTNumber;
       R_A(*pc).value.n = RK_B(*pc).value.n - RK_C(*pc).value.n;
       break;
     }
 
     case S_OP_MUL: { // R(A) = RK(B) * RK(C)
       SVMDLogOpABC();
+      assert(RK_B(*pc).type == SValueTNumber);
+      assert(RK_C(*pc).type == SValueTNumber);
+      R_A(*pc).type = SValueTNumber;
       R_A(*pc).value.n = RK_B(*pc).value.n * RK_C(*pc).value.n;
       break;
     }
 
     case S_OP_DIV: { // R(A) = RK(B) / RK(C)
       SVMDLogOpABC();
+      assert(RK_B(*pc).type == SValueTNumber);
+      assert(RK_C(*pc).type == SValueTNumber);
+      R_A(*pc).type = SValueTNumber;
       R_A(*pc).value.n = RK_B(*pc).value.n / RK_C(*pc).value.n;
       break;
     }
 
+    // End: Arithmetic
+    // -------------------------------------------------------------------------
+    // Start: Logic tests
+
     case S_OP_NOT: { // R(A) = not R(B)
       SVMDLogOpAB();
-      // TODO: Needs testing
-      R_A(*pc).value.n = ! R_B(*pc).value.n;
+      if (R_B(*pc).value.p) {
+        R_A(*pc).type = SValueTFalse;
+        R_A(*pc).value.n = 0.0;
+      } else {
+        R_A(*pc).type = SValueTTrue;
+        R_A(*pc).value.n = 1.0;
+      }
       break;
     }
 
     case S_OP_EQ: { // if (RK(B) == RK(C)) JUMP else PC++
       SVMDLogOpABC();
-      // TODO: Needs testing
       if (RK_B(*pc).value.n == RK_C(*pc).value.n) {
         ++pc;
         assert(SInstrGetOP(*pc) == S_OP_JUMP);
@@ -294,7 +315,6 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
 
     case S_OP_LT: { // if (RK(B) < RK(C)) JUMP else PC++
       SVMDLogOpABC();
-      // TODO: Needs testing
       if (RK_B(*pc).value.n < RK_C(*pc).value.n) {
         ++pc;
         assert(SInstrGetOP(*pc) == S_OP_JUMP);
@@ -308,22 +328,44 @@ SSchedExec(SVM* vm, SSched* sched, STask *task) {
 
     case S_OP_LE: { // if (RK(B) <= RK(C)) JUMP else PC++
       SVMDLogOpABC();
-      //SVMDLogInstrRKVal(B, *pc);
-      //SVMDLogInstrRKVal(C, *pc);
       if (RK_B(*pc).value.n <= RK_C(*pc).value.n) {
         // Fetch the upcoming JUMP instruction (always follows a test)
-        //SLogD("(B <= B) = true");
         ++pc;
         assert(SInstrGetOP(*pc) == S_OP_JUMP);
         SVMDLogOpBss();
         pc += SInstrGetBss(*pc);
       } else {
         // Failed. Skip the JUMP instruction
-        //SLogD("(b <= c) = false");
         ++pc;
       }
       break;
     }
+
+    // End: Logic tests
+    // -------------------------------------------------------------------------
+    // Start: Debugging
+    #if S_DEBUG
+
+    case S_OP_DBGREG: { // dump ABC register values
+      SVMDLogOp();
+      SVMDLogInstrRVal(A, *pc);
+      SVMDLogInstrRVal(B, *pc);
+      SVMDLogInstrRVal(C, *pc);
+      break;
+    }
+
+    case S_OP_DBGCB: { // Call a C function with the current state
+      SVMDLogOpABC();
+      SDebugVMCallback callback = K_B(*pc).value.p;
+      assert(callback != 0);
+      assert(K_B(*pc).type == SValueTOpaque);
+      callback(vm, sched, task, pc);
+      break;
+    }
+
+    #endif
+    // End: Debugging
+    // -------------------------------------------------------------------------
 
     default:
       SVMDLogOp("unexpected operation");

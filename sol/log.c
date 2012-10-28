@@ -2,6 +2,8 @@
 #include <unistd.h> // isatty
 #include <stdarg.h> // va_*
 
+FILE* SLogStream = 0;
+
 void SLog__(
     const char *filename,
     int line,
@@ -10,39 +12,44 @@ void SLog__(
     bool style_whole_line,
     const char *format,
     ...) {
+
+  if (SLogStream == 0) {
+    SLogStream = stderr;
+  }
+
   static int color_output = -1;
   if (color_output == -1) {
     color_output = !!isatty(1);
   }
 
-  flockfile(S_LOG_STREAM);
+  flockfile(SLogStream);
 
   if (style_whole_line && color_output) {
     if (prefix) {
-      fprintf(S_LOG_STREAM, "\e[%sm%s ", prefix_style, prefix ? prefix : "");
+      fprintf(SLogStream, "\e[%sm%s ", prefix_style, prefix ? prefix : "");
     } else {
-      fprintf(S_LOG_STREAM, "\e[%sm", prefix_style);
+      fprintf(SLogStream, "\e[%sm", prefix_style);
     }
   } else if (prefix) {
     if (color_output) {
-      fprintf(S_LOG_STREAM, "\e[%sm%s\e[0m ", prefix_style, prefix);
+      fprintf(SLogStream, "\e[%sm%s\e[0m ", prefix_style, prefix);
     } else {
-      fprintf(S_LOG_STREAM, "%s ", prefix);
+      fprintf(SLogStream, "%s ", prefix);
     }
   }
 
   va_list ap;
   va_start(ap, format);
-  vfprintf(S_LOG_STREAM, format, ap);
+  vfprintf(SLogStream, format, ap);
   va_end(ap);
   
   fprintf(
-    S_LOG_STREAM,
+    SLogStream,
     color_output ? " \e[30;1m(%s:%d)\e[0m\n" : " (%s:%d)",
     filename,
     line
   );
 
-  funlockfile(S_LOG_STREAM);
-  fflush(S_LOG_STREAM);
+  funlockfile(SLogStream);
+  fflush(SLogStream);
 }

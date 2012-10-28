@@ -7,7 +7,7 @@
 // 
 //
 #if S_VM_DEBUG_LOG
-  #define SVMDLog(fmt, ...) printf("[vm] %-14p %-14p " fmt "\n", \
+  #define SVMDLog(fmt, ...) SLog("[vm] %-14p %-14p " fmt, \
     task, task->ar->func, ##__VA_ARGS__)
 
   S_UNUSED static const char const* _debug_op_names[] = {

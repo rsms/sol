@@ -14,6 +14,7 @@ typedef enum {
   // Non-atom value types
   SValueTNumber,
   SValueTFunc,
+  SValueTOpaque,
 } SValueT;
 
 #define SNumberFormat "%f"
@@ -35,6 +36,9 @@ const SValue SValueFalse;
 
 #define SValueFunc(v) \
   ((SValue){.type = SValueTFunc, .value = {.p = v}})
+
+#define SValueOpaque(v) \
+  ((SValue){.type = SValueTOpaque, .value = {.p = v}})
 
 char* SValueRepr(char* buf, size_t bufsize, SValue* v);
 
