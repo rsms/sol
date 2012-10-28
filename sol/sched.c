@@ -126,7 +126,6 @@ typedef struct {
 } STimer;
 
 static void _TimerCallback(EVLoop *evloop, ev_timer *w, int revents) {
-  STrace();
   SSched* s = (SSched*)ev_userdata(evloop);
   STimer* timer = (STimer*)w;
   _DumpRQAndWQ(s);
@@ -158,7 +157,6 @@ static void _TimerCallback(EVLoop *evloop, ev_timer *w, int revents) {
 // Start a timer
 static inline STimer*
 _TimerStart(SSched* s, STask* task, SNumber after_ms, SNumber repeat_ms) {
-  STrace();
   STimer* timer = (STimer*)malloc(sizeof(STimer)); // FIXME: malloc
   timer->task = task;
   
@@ -181,7 +179,6 @@ _TimerStart(SSched* s, STask* task, SNumber after_ms, SNumber repeat_ms) {
 }
 
 static inline void _TimerCancel(SSched* s, STimer* timer) {
-  STrace();
   assert(timer->task != 0);
   assert(timer->task->wtype == STaskWaitTimer);
   assert(timer->task->wp == timer);
@@ -194,7 +191,6 @@ static inline void _TimerCancel(SSched* s, STimer* timer) {
 // Returns true if `t` has subtasks which are still alive.
 inline static bool S_ALWAYS_INLINE
 _EndTask(SSched* s, STask* t, STaskStatus status) {
-  STrace();
 
   if (status == STaskStatusError) {
     SLogE("Task error");

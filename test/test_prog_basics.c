@@ -40,9 +40,9 @@ void test_data(SVM* vm) {
   };
   size_t instr_offs = 3;
   SInstr* start_pc = instructions + instr_offs - 1;
-  SFunc* fun = SFuncCreate(constants, instructions);
+  SFunc* func = SFuncCreate(constants, instructions);
   SSched* sched = SSchedCreate();
-  STask* task = STaskCreate(fun, 0, 0);
+  STask* task = STaskCreate(func, 0, 0);
   
   // R(0) = K(1) == 10.0, R(1) = K(0) == 5.0
   assert(SchedExec(vm, sched, task) == STaskStatusYield);
@@ -55,68 +55,6 @@ void test_data(SVM* vm) {
   instructions[instr_offs+1] = SInstr_YIELD(0, 0, 0);
   assert(SchedExec(vm, sched, task) == STaskStatusYield);
   SAssertRegNumVal(2, 10.0);
-}
-
-
-void test_control_flow_on_yield(SVM* vm, SSched* s, STask* t, SInstr* pc) {
-  STrace();
-
-  // AR's PC should be 1 less than the PC when this callback function is called.
-  assert(t->ar->pc+1 == pc);
-
-  // AR's PC should be at the first YIELD instruction
-  assert(SInstrGetOP(*t->ar->pc) == S_OP_YIELD);
-  assert(SInstrGetA(*t->ar->pc) == 0); // yield resources
-}
-
-void test_control_flow_on_timeout(SVM* vm, SSched* s, STask* t, SInstr* pc) {
-  STrace();
-
-  // AR's PC should be 1 less than the PC when this callback function is called.
-  assert(t->ar->pc+1 == pc);
-
-  // AR's PC should be at the first YIELD instruction
-  //assert(SInstrGetOP(*t->ar->pc) == S_OP_YIELD);
-  //assert(SInstrGetA(*t->ar->pc) == 1); // wait for timer
-}
-
-void test_control_flow(SVM* vm) {
-  // Covered:     YIELD, JUMP, RETURN
-  // Not covered: CALL, SPAWN
-  SValue constants[] = {
-    SValueNumber(5),
-    SValueOpaque(&test_control_flow_on_yield),
-    SValueOpaque(&test_control_flow_on_timeout),
-  };
-  SInstr instructions[100] = {
-    SInstr_YIELD(0, 0, 0),
-  };
-  size_t instr_offs = 1;
-  SInstr* start_pc = instructions + instr_offs - 1;
-  SFunc* fun = SFuncCreate(constants, instructions);
-  SSched* sched = SSchedCreate();
-  STask* task = STaskCreate(fun, 0, 0);
-  
-  // YIELD resources
-  assert(SchedExec(vm, sched, task) == STaskStatusYield);
-
-  // YIELD suspend, timeout RK(0) = 5
-  task->ar->pc = start_pc;
-  instructions[instr_offs]   = SInstr_YIELD(0, 0, 0);
-  instructions[instr_offs+1] = SInstr_DBGCB(0, 1, 0); // call K(B)(vm, s, t, pc)
-  instructions[instr_offs+2] = SInstr_YIELD(1, S_INSTR_RK_k+0, 0);
-  instructions[instr_offs+3] = SInstr_DBGCB(0, 2, 0); // call K(B)(vm, s, t, pc)
-  instructions[instr_offs+4] = SInstr_RETURN(0, 0);
-  //assert(SchedExec(vm, sched, task) == STaskStatusSuspend);
-  assert(SchedExec(vm, sched, task) == STaskStatusYield);
-  assert(task->ar->pc == start_pc+1);
-
-  SSchedTask(sched, task);
-  SSchedRun(vm, sched);
-  STaskRelease(task);
-  SSchedDestroy(sched);
-  //SLogD("%p", ((STask*)task->wp)->wp); // Crash, pls.
-  exit(0);
 }
 
 
@@ -133,9 +71,9 @@ void test_arithmetic(SVM* vm) {
   };
   size_t instr_offs = 3;
   SInstr* start_pc = instructions + instr_offs - 1;
-  SFunc* fun = SFuncCreate(constants, instructions);
+  SFunc* func = SFuncCreate(constants, instructions);
   SSched* sched = SSchedCreate();
-  STask* task = STaskCreate(fun, 0, 0);
+  STask* task = STaskCreate(func, 0, 0);
 
   // Load Ks to Rs
   assert(SchedExec(vm, sched, task) == STaskStatusYield);
@@ -196,9 +134,9 @@ void test_logic_tests(SVM* vm) {
   };
   size_t instr_offs = 3;
   SInstr* start_pc = instructions + instr_offs - 1;
-  SFunc* fun = SFuncCreate(constants, instructions);
+  SFunc* func = SFuncCreate(constants, instructions);
   SSched* sched = SSchedCreate();
-  STask* task = STaskCreate(fun, 0, 0);
+  STask* task = STaskCreate(func, 0, 0);
   
   // Load Ks to Rs
   assert(SchedExec(vm, sched, task) == STaskStatusYield);
@@ -313,16 +251,46 @@ void test_logic_tests(SVM* vm) {
   SSchedDestroy(sched);
 }
 
+
+void test_control_flow(SVM* vm) {
+  // Covered: YIELD(0), RETURN
+  SValue constants[] = {
+    SValueNumber(5),
+  };
+  SInstr instructions[100] = {
+    SInstr_YIELD(0, 0, 0),
+    SInstr_RETURN(0, 0),
+  };
+
+  SFunc* func = SFuncCreate(constants, instructions);
+  SSched* sched = SSchedCreate();
+  STask* task = STaskCreate(func, 0, 0);
+  
+  // YIELD resources
+  assert(SchedExec(vm, sched, task) == STaskStatusYield);
+
+  // AR's PC should be 1 less than the PC when this callback function is called.
+  assert(task->ar->pc == instructions);
+
+  // AR's PC should be at the first YIELD instruction
+  assert(SInstrGetOP(*task->ar->pc) == S_OP_YIELD);
+  assert(SInstrGetA(*task->ar->pc) == 0); // yield resources
+
+  // RETURN
+  assert(SchedExec(vm, sched, task) == STaskStatusEnd);
+
+  SSchedTask(sched, task);
+  STaskRelease(task);
+  SSchedDestroy(sched);
+}
+
 int main(int argc, const char** argv) {
   SVM vm = SVM_INIT;
 
   test_data(&vm);
-  test_control_flow(&vm);
   test_arithmetic(&vm);
   test_logic_tests(&vm);
+  test_control_flow(&vm);
 
   return 0;
 }
-
-// make -C ../sol DEBUG=1 libsol && \
-// make /Users/rsms/src/sol3/build/test/test_prog_basics.c-smp
