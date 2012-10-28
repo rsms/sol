@@ -8,17 +8,22 @@ A sunny little programming language on a register-based virtual machine.
 Each scheduler has one run queue in which tasks are queued for execution
 
     VM
-      Scheduler N
-        RunQueue
-          Task
-            next -> Task...
-            ActivationRecord
-              next -> ActivationRecord...
-              Function
-                Constants
-                Instructions
-              ProgramCounter
-              Registry
+    └ Scheduler (per OS thread)
+       ├ RunQueue
+       │ └ Task
+       │    ├ next → Task...
+       │    ├ super_task → Task...
+       │    ├ ActivationRecord
+       │    │ ├ next → ActivationRecord...
+       │    │ └ Function
+       │    │    ├ Constants
+       │    │    └ Instructions
+       │    ├ ProgramCounter
+       │    ├ Registry
+       │    ├ MessageInbox
+       │    └ WaitingForWatcher
+       └ WaitQueue
+          └ Task...
 
       (Task migration)
 
@@ -246,13 +251,13 @@ Special flags that can be passed to make (e.g. `make FLAG=VALUE ...`):
 
 - `DEBUG=1|0` — When set to "1", build without optimizations, with debug symbols, with debug logging and with assertions. Defaults to "0", which causes building of "release" products (optimizations enabled, no debug logging and no assertions).
 
-- `TARGET_ARCH=NAME` — Set the architecture to build for. Valid values for `NAME` depends on the compiler. Defaults to the host architecture (as reported by `shell uname -m`). For instance, to build an IA32 product on a x64 system: `make TARGET_ARCH=i386`.
+- `TARGET_ARCH=NAME` — Set the architecture to build for. Valid values for `NAME` depends on the compiler. Defaults to the host architecture (as reported by `uname -m`). For instance, to build an IA32 product on a x64 system: `make TARGET_ARCH=i386`.
 
-- `BUILD_PREFIX` — Base directory for products. Defaults to `<BUILD_PREFIX>/<DEBUG ? debug : release>`.
+- `BUILD_PREFIX` — Base directory for products. Defaults to `<BASE_BUILD_PREFIX>/<DEBUG ? debug : release>`.
 
 - `BASE_BUILD_PREFIX` — Base directory for tests and products. Defaults to `./build`.
 
-- `TESTS_BUILD_PREFIX` — Base directory for generated tests. Defaults to `<BUILD_PREFIX>/test`.
+- `TESTS_BUILD_PREFIX` — Base directory for generated tests. Defaults to `<BASE_BUILD_PREFIX>/test`.
 
 # MIT License
 
