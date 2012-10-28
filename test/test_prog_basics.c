@@ -55,6 +55,10 @@ void test_data(SVM* vm) {
   instructions[instr_offs+1] = SInstr_YIELD(0, 0, 0);
   assert(SchedExec(vm, sched, task) == STaskStatusYield);
   SAssertRegNumVal(2, 10.0);
+
+  SSchedDestroy(sched);
+  STaskRelease(task);
+  SFuncDestroy(func);
 }
 
 
@@ -114,8 +118,9 @@ void test_arithmetic(SVM* vm) {
   SAssertRegNumVal(1, 10.0);
   SAssertRegNumVal(2, 0.5);
 
-  STaskRelease(task);
   SSchedDestroy(sched);
+  STaskRelease(task);
+  SFuncDestroy(func);
 }
 
 
@@ -246,9 +251,9 @@ void test_logic_tests(SVM* vm) {
   assert(SchedExec(vm, sched, task) == STaskStatusYield);
   assert(task->ar->pc == start_pc+4); // test succeeded
 
-
-  STaskRelease(task);
   SSchedDestroy(sched);
+  STaskRelease(task);
+  SFuncDestroy(func);
 }
 
 
@@ -279,9 +284,9 @@ void test_control_flow(SVM* vm) {
   // RETURN
   assert(SchedExec(vm, sched, task) == STaskStatusEnd);
 
-  SSchedTask(sched, task);
-  STaskRelease(task);
   SSchedDestroy(sched);
+  STaskRelease(task);
+  SFuncDestroy(func);
 }
 
 int main(int argc, const char** argv) {
