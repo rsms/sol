@@ -1,9 +1,4 @@
-Anländer Las Vegas måndag 29/10 vid 18-tiden. Vidare till SF onsdag den 31/10 framme i SF vid 14.30 ca. Hem från SF söndag den 4/11 på kvällen.
-
-# Andreas
-
-Andreas & Erik: **8-18 Nov**
-
+Erlang snippet re pids
 
     erts_smp_atomic_inc(&process_count);
     p->id = make_internal_pid(p_serial << p_serial_shift | p_next);
