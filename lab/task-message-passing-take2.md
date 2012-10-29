@@ -3,15 +3,15 @@ Erlang snippet re pids
     erts_smp_atomic_inc(&process_count);
     p->id = make_internal_pid(p_serial << p_serial_shift | p_next);
     if (p->id == ERTS_INVALID_PID) {
-    	/* Do not use the invalid pid; change serial */
-    	p_serial++;
-    	p_serial &= p_serial_mask;
-    	p->id = make_internal_pid(p_serial << p_serial_shift | p_next);
-    	ASSERT(p->id != ERTS_INVALID_PID);
+      /* Do not use the invalid pid; change serial */
+      p_serial++;
+      p_serial &= p_serial_mask;
+      p->id = make_internal_pid(p_serial << p_serial_shift | p_next);
+      ASSERT(p->id != ERTS_INVALID_PID);
     }
     ASSERT(internal_pid_serial(p->id) <= (erts_use_r9_pids_ports
-    					  ? ERTS_MAX_PID_R9_SERIAL
-    					  : ERTS_MAX_PID_SERIAL));
+                ? ERTS_MAX_PID_R9_SERIAL
+                : ERTS_MAX_PID_SERIAL));
 
 ## 1. send msg to tid
 
@@ -142,6 +142,7 @@ In the second case of calling `M`, trapping of errors would not be possible, whi
     volatile SSched* least_loaded_sched
 
 S1:
+
     runloop:
       exec()...
       for each S in all_schedulers:
@@ -149,6 +150,7 @@ S1:
           goto runloop
       least_loaded_sched = S1
 S2:
+
     runloop:
       exec()...
       for each S in all_schedulers:
