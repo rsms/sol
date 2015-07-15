@@ -78,7 +78,7 @@ libev:
 lib$(project_id): common_pre $(headers_pub_export) $(static_library)
 $(static_library): $(objects)
 	@mkdir -p $(dir $(static_library))
-	$(AR) -rcL $@ $^
+	$(AR) -rc $@ $^
 
 # Generate LLVM IS code (.ll files)
 llvm_ir_pre: common_pre
